@@ -213,12 +213,10 @@ local function startFly()
 		local cam = workspace.CurrentCamera
 		local dir = Vector3.zero
 
-		-- ✅ แก้: รองรับ thumbstick มือถือ
 		local moveVec = UIS:GetStringForKeyCode(Enum.KeyCode.Thumbstick1) ~= "" 
 			and Vector3.zero or Vector3.zero
 
 		local thumbstick = UIS:GetConnectedGamepads()
-		-- อ่านค่า thumbstick จาก Humanoid.MoveDirection แทน (รองรับมือถือ Roblox)
 		local hum2 = char:FindFirstChildOfClass("Humanoid")
 		if hum2 then
 			local md = hum2.MoveDirection
@@ -262,7 +260,7 @@ local function startNoclip()
 		local char = player.Character
 		if not char then return end
 		for _, part in ipairs(char:GetDescendants()) do
-			if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+			if part:IsA("BasePart") then
 				part.CanCollide = false
 			end
 		end
@@ -319,7 +317,7 @@ local function createRow(name, yPos, getVal, setVal, toggle, noSlider)
 	end)
 
 	if not noSlider then
-		local maxVal = 500 -- ✅ แก้: ทุก slider ใช้ max 500
+		local maxVal = 500
 
 		local sliderBg = Instance.new("Frame", row)
 		sliderBg.Size = UDim2.new(0,140,0,10)
@@ -333,7 +331,6 @@ local function createRow(name, yPos, getVal, setVal, toggle, noSlider)
 		fill.BorderSizePixel = 0
 		Instance.new("UICorner", fill).CornerRadius = UDim.new(1,0)
 
-		-- ✅ แก้: valLabel เปลี่ยนเป็น TextBox กรอกเลขได้
 		local valBox = Instance.new("TextBox", row)
 		valBox.Size = UDim2.new(0,45,0,26)
 		valBox.Position = UDim2.new(0,235,0.5,-13)
@@ -352,7 +349,6 @@ local function createRow(name, yPos, getVal, setVal, toggle, noSlider)
 			setVal(v)
 		end
 
-		-- ✅ กรอกเลขแล้วกด Enter
 		valBox.FocusLost:Connect(function(enterPressed)
 			local num = tonumber(valBox.Text)
 			if num then
