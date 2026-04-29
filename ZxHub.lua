@@ -1,4 +1,4 @@
--- ZxHub ULTRA UI
+-- ZxHub FINAL (UI + System Complete)
 
 local player = game.Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
@@ -6,14 +6,14 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 -- =====================
--- COLORS
+-- COLORS (ปรับให้ใกล้รูป)
 -- =====================
 local C = {
-    bg = Color3.fromRGB(18,20,22),
-    row = Color3.fromRGB(35,40,45),
+    bg = Color3.fromRGB(16,18,20),
+    row = Color3.fromRGB(30,34,38),
     stroke = Color3.fromRGB(60,70,75),
-    green = Color3.fromRGB(0,255,140),
-    greenDim = Color3.fromRGB(0,140,80),
+    green = Color3.fromRGB(80,255,140),
+    green2 = Color3.fromRGB(30,200,100),
     gray = Color3.fromRGB(80,90,100),
     white = Color3.fromRGB(255,255,255)
 }
@@ -32,7 +32,7 @@ end
 local humanoid = getHumanoid()
 
 -- =====================
--- STATE (OFF DEFAULT)
+-- STATE
 -- =====================
 local flyEnabled, speedEnabled, jumpEnabled, noclipEnabled = false,false,false,false
 local flySpeed, walkSpeed, jumpPower = 8,16,50
@@ -42,35 +42,57 @@ local flySpeed, walkSpeed, jumpPower = 8,16,50
 -- =====================
 local gui = Instance.new("ScreenGui", player.PlayerGui)
 gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
 
 -- =====================
--- MAIN FRAME
+-- MAIN FRAME (Glass)
 -- =====================
 local Frame = Instance.new("Frame", gui)
-Frame.Size = UDim2.new(0.38,0,0.5,0)
-Frame.Position = UDim2.new(0.31,0,0.25,0)
+Frame.Size = UDim2.new(0.36,0,0.52,0)
+Frame.Position = UDim2.new(0.32,0,0.24,0)
 Frame.BackgroundColor3 = C.bg
+Frame.BackgroundTransparency = 0.05
 Frame.Active = true
 Frame.Draggable = true
-Instance.new("UICorner",Frame).CornerRadius = UDim.new(0,10)
+
+Instance.new("UICorner",Frame).CornerRadius = UDim.new(0,12)
 
 local stroke = Instance.new("UIStroke",Frame)
 stroke.Color = C.stroke
+stroke.Transparency = 0.4
+
+-- Gradient overlay
+local grad = Instance.new("UIGradient",Frame)
+grad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(30,35,40)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(10,12,14))
+}
 
 -- =====================
 -- LOGO (เหมือนรูป 2)
 -- =====================
 local Logo = Instance.new("Frame",gui)
-Logo.Size = UDim2.new(0,80,0,80)
-Logo.Position = UDim2.new(0,20,0.5,-40)
+Logo.Size = UDim2.new(0,90,0,90)
+Logo.Position = UDim2.new(0,20,0.5,-45)
 Logo.BackgroundColor3 = C.bg
 Logo.Visible = false
 Instance.new("UICorner",Logo).CornerRadius = UDim.new(1,0)
 
+-- outer ring
 local ring = Instance.new("UIStroke",Logo)
-ring.Color = C.green
-ring.Thickness = 2
+ring.Color = Color3.fromRGB(50,50,50)
+ring.Thickness = 3
 
+-- green ring glow
+local glow = Instance.new("UIStroke",Logo)
+glow.Color = C.green
+glow.Thickness = 2
+
+TweenService:Create(glow,TweenInfo.new(1,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,-1,true),{
+    Thickness = 4
+}):Play()
+
+-- text ZX
 local txt = Instance.new("TextLabel",Logo)
 txt.Size = UDim2.new(1,0,1,0)
 txt.Text = "ZX"
@@ -106,25 +128,29 @@ local function createRow(y,text)
     row.Size = UDim2.new(1,-20,0,70)
     row.Position = UDim2.new(0,10,0,y)
     row.BackgroundColor3 = C.row
-    Instance.new("UICorner",row).CornerRadius = UDim.new(0,8)
+    Instance.new("UICorner",row).CornerRadius = UDim.new(0,10)
+
+    local stroke = Instance.new("UIStroke",row)
+    stroke.Color = Color3.fromRGB(60,70,75)
 
     local lbl = Instance.new("TextLabel",row)
-    lbl.Size = UDim2.new(0,150,1,0)
+    lbl.Size = UDim2.new(0,160,1,0)
     lbl.Text = "[ "..text.." ]"
     lbl.TextColor3 = C.green
     lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 16
     lbl.BackgroundTransparency = 1
 
     return row
 end
 
 -- =====================
--- SLIDER
+-- SLIDER (เหมือนรูป)
 -- =====================
 local function makeSlider(row, value, callback)
     local track = Instance.new("Frame",row)
-    track.Size = UDim2.new(0,200,0,6)
-    track.Position = UDim2.new(0,180,0.5,0)
+    track.Size = UDim2.new(0,220,0,6)
+    track.Position = UDim2.new(0,190,0.5,8)
     track.BackgroundColor3 = C.gray
     Instance.new("UICorner",track)
 
@@ -163,18 +189,18 @@ local function makeSlider(row, value, callback)
 end
 
 -- =====================
--- TOGGLE (เหมือนรูป)
+-- TOGGLE (วงรีเหมือนรูป)
 -- =====================
 local function makeToggle(row,callback)
     local bg = Instance.new("Frame",row)
-    bg.Size = UDim2.new(0,80,0,36)
-    bg.Position = UDim2.new(1,-100,0.5,-18)
+    bg.Size = UDim2.new(0,90,0,38)
+    bg.Position = UDim2.new(1,-110,0.5,-19)
     bg.BackgroundColor3 = C.gray
     Instance.new("UICorner",bg).CornerRadius = UDim.new(1,0)
 
     local knob = Instance.new("Frame",bg)
     knob.Size = UDim2.new(0,30,0,30)
-    knob.Position = UDim2.new(0,3,0.5,-15)
+    knob.Position = UDim2.new(0,4,0.5,-15)
     knob.BackgroundColor3 = C.white
     Instance.new("UICorner",knob).CornerRadius = UDim.new(1,0)
 
@@ -182,11 +208,15 @@ local function makeToggle(row,callback)
 
     bg.InputBegan:Connect(function()
         state = not state
-        TweenService:Create(knob,TweenInfo.new(0.2),{
-            Position = state and UDim2.new(1,-33,0.5,-15) or UDim2.new(0,3,0.5,-15)
+
+        TweenService:Create(knob,TweenInfo.new(0.15),{
+            Position = state and UDim2.new(1,-34,0.5,-15) or UDim2.new(0,4,0.5,-15)
         }):Play()
 
-        bg.BackgroundColor3 = state and C.green or C.gray
+        TweenService:Create(bg,TweenInfo.new(0.15),{
+            BackgroundColor3 = state and C.green or C.gray
+        }):Play()
+
         callback(state)
     end)
 end
