@@ -1,6 +1,3 @@
--- ZxHub PRO FINAL (COMPLETE)
-
--- ================= SAFE LOAD =================
 if not game:IsLoaded() then
 	game.Loaded:Wait()
 end
@@ -11,7 +8,6 @@ repeat task.wait() until player:FindFirstChild("PlayerGui")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
--- ================= STATE =================
 local flyEnabled = false
 local speedEnabled = false
 local jumpEnabled = false
@@ -24,7 +20,6 @@ local jumpPower = 50
 local up = false
 local down = false
 
--- ================= CHARACTER =================
 local function getChar()
 	return player.Character or player.CharacterAdded:Wait()
 end
@@ -35,7 +30,6 @@ end
 
 local humanoid = getHumanoid()
 
--- ================= GUI FIX =================
 pcall(function()
 	if player.PlayerGui:FindFirstChild("ZxHubGUI") then
 		player.PlayerGui.ZxHubGUI:Destroy()
@@ -49,7 +43,6 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- ================= GUI =================
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.new(0, 520, 0, 360)
 frame.Position = UDim2.new(0.5,-260,0.5,-180)
@@ -85,7 +78,6 @@ credit.Font = Enum.Font.GothamBold
 credit.TextSize = 14
 credit.TextXAlignment = Enum.TextXAlignment.Left
 
-
 local minBtn = Instance.new("TextButton", frame)
 minBtn.Size = UDim2.new(0,30,0,30)
 minBtn.Position = UDim2.new(1,-35,0,5)
@@ -109,7 +101,6 @@ local stroke = Instance.new("UIStroke", logo)
 stroke.Color = Color3.fromRGB(0,255,120)
 stroke.Thickness = 2
 
--- ================= MOBILE BUTTONS =================
 local upBtn = Instance.new("TextButton", gui)
 upBtn.Size = UDim2.new(0,60,0,60)
 upBtn.Position = UDim2.new(1,-80,0.7,0)
@@ -137,6 +128,7 @@ upBtn.InputBegan:Connect(function(i)
 		up = true
 	end
 end)
+
 upBtn.InputEnded:Connect(function(i)
 	if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
 		up = false
@@ -148,25 +140,13 @@ downBtn.InputBegan:Connect(function(i)
 		down = true
 	end
 end)
+
 downBtn.InputEnded:Connect(function(i)
 	if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
 		down = false
 	end
 end)
 
--- ================= KEYBOARD UP/DOWN =================
-UIS.InputBegan:Connect(function(i, gp)
-	if gp then return end
-	if i.KeyCode == Enum.KeyCode.Space then up = true end
-	if i.KeyCode == Enum.KeyCode.LeftControl then down = true end
-end)
-
-UIS.InputEnded:Connect(function(i)
-	if i.KeyCode == Enum.KeyCode.Space then up = false end
-	if i.KeyCode == Enum.KeyCode.LeftControl then down = false end
-end)
-
--- ================= DRAG =================
 local function dragify(obj)
 	local drag = false
 	local start, pos
@@ -204,7 +184,6 @@ logo.MouseButton1Click:Connect(function()
 	logo.Visible = false
 end)
 
--- ================= FLY =================
 local flyConn
 local flyBV, flyBG
 
@@ -229,10 +208,6 @@ local function startFly()
 		local cam = workspace.CurrentCamera
 		local dir = Vector3.zero
 
-		local moveVec = UIS:GetStringForKeyCode(Enum.KeyCode.Thumbstick1) ~= "" 
-			and Vector3.zero or Vector3.zero
-
-		local thumbstick = UIS:GetConnectedGamepads()
 		local hum2 = char:FindFirstChildOfClass("Humanoid")
 		if hum2 then
 			local md = hum2.MoveDirection
@@ -268,7 +243,6 @@ local function stopFly()
 	end)
 end
 
--- ================= NOCLIP =================
 local noclipConn
 
 local function startNoclip()
@@ -295,7 +269,6 @@ local function stopNoclip()
 	end
 end
 
--- ================= CREATE ROW =================
 local function createRow(name, yPos, getVal, setVal, toggle, noSlider)
 	local row = Instance.new("Frame", frame)
 	row.Size = UDim2.new(1,-20,0,50)
@@ -365,7 +338,7 @@ local function createRow(name, yPos, getVal, setVal, toggle, noSlider)
 			setVal(v)
 		end
 
-		valBox.FocusLost:Connect(function(enterPressed)
+		valBox.FocusLost:Connect(function()
 			local num = tonumber(valBox.Text)
 			if num then
 				applyVal(num)
@@ -401,7 +374,6 @@ local function createRow(name, yPos, getVal, setVal, toggle, noSlider)
 	end
 end
 
--- ================= CREATE ROWS =================
 createRow("FLY", 50,
 	function() return flySpeed end,
 	function(v) flySpeed = v end,
@@ -427,7 +399,6 @@ createRow("NOCLIP", 260,
 	true
 )
 
--- ================= RESPAWN =================
 player.CharacterAdded:Connect(function()
 	task.wait(1)
 	humanoid = getHumanoid()
