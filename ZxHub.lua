@@ -1,4 +1,4 @@
--- ZxHub PRO FINAL UI
+-- ZxHub PRO FINAL (UI + MOBILE FLY FIX)
 
 local player = game.Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
@@ -13,6 +13,10 @@ local noclipEnabled = false
 local flySpeed = 8
 local walkSpeed = 16
 local jumpPower = 50
+
+-- MOBILE CONTROL
+local up = false
+local down = false
 
 -- ================= CHARACTER =================
 local function getChar()
@@ -70,7 +74,22 @@ local stroke = Instance.new("UIStroke", logo)
 stroke.Color = Color3.fromRGB(0,255,120)
 stroke.Thickness = 2
 
--- drag
+-- ================= MOBILE FLY BUTTON =================
+local upBtn = Instance.new("TextButton", gui)
+upBtn.Size = UDim2.new(0,60,0,60)
+upBtn.Position = UDim2.new(1,-80,0.7,0)
+upBtn.Text = "↑"
+upBtn.Visible = false
+upBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+
+local downBtn = Instance.new("TextButton", gui)
+downBtn.Size = UDim2.new(0,60,0,60)
+downBtn.Position = UDim2.new(1,-80,0.8,0)
+downBtn.Text = "↓"
+downBtn.Visible = false
+downBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+
+-- ================= DRAG =================
 local function dragify(obj)
 	local drag=false
 	local start, pos
@@ -121,16 +140,24 @@ local function startFly()
 	bv.MaxForce = Vector3.new(1e6,1e6,1e6)
 	bg.MaxTorque = Vector3.new(1e6,1e6,1e6)
 
+	upBtn.Visible = true
+	downBtn.Visible = true
+
 	flyConn = RunService.RenderStepped:Connect(function()
 		if not flyEnabled then return end
 
 		local cam = workspace.CurrentCamera
 		local dir = Vector3.zero
 
+		-- PC
 		if UIS:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
 		if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
 		if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
 		if UIS:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
+
+		-- MOBILE
+		if up then dir += Vector3.new(0,1,0) end
+		if down then dir -= Vector3.new(0,1,0) end
 
 		bv.Velocity = dir * flySpeed
 		bg.CFrame = cam.CFrame
@@ -141,8 +168,18 @@ local function stopFly()
 	if flyConn then flyConn:Disconnect() end
 	if bv then bv:Destroy() end
 	if bg then bg:Destroy() end
+
+	upBtn.Visible = false
+	downBtn.Visible = false
 end
 
+upBtn.MouseButton1Down:Connect(function() up=true end)
+upBtn.MouseButton1Up:Connect(function() up=false end)
+
+downBtn.MouseButton1Down:Connect(function() down=true end)
+downBtn.MouseButton1Up:Connect(function() down=false end)
+
+-- NOCLIP
 local noclipConn
 local function startNoclip()
 	noclipConn = RunService.Stepped:Connect(function()
@@ -158,8 +195,8 @@ local function stopNoclip()
 	if noclipConn then noclipConn:Disconnect() end
 end
 
--- ================= UI ROW (เหมือนรูป) =================
-local function createRow(name,y,get,set,toggleFunc)
+-- ================= UI ROW =================
+local function createRow(name,y,get,set,toggleFunc,noValue)
 
 	local row = Instance.new("Frame", frame)
 	row.Size = UDim2.new(1,-20,0,70)
@@ -167,45 +204,56 @@ local function createRow(name,y,get,set,toggleFunc)
 	row.BackgroundColor3 = Color3.fromRGB(30,30,30)
 	Instance.new("UICorner",row).CornerRadius=UDim.new(0,14)
 
-	-- label
 	local lbl = Instance.new("TextLabel",row)
 	lbl.Text = "[ "..name.." ]"
 	lbl.TextColor3 = Color3.fromRGB(0,255,120)
 	lbl.Font = Enum.Font.GothamBold
-	lbl.TextSize = 16
 	lbl.Size = UDim2.new(0.25,0,1,0)
 	lbl.BackgroundTransparency=1
+
+	-- NO VALUE (noclip)
+	if noValue then
+		local toggle = Instance.new("TextButton",row)
+		toggle.Size = UDim2.new(0,90,0,35)
+		toggle.Position = UDim2.new(1,-100,0.5,-18)
+		toggle.Text = "OFF"
+		toggle.BackgroundColor3 = Color3.fromRGB(80,80,80)
+
+		local state=false
+		toggle.MouseButton1Click:Connect(function()
+			state=not state
+			toggle.Text = state and "ON" or "OFF"
+			toggle.BackgroundColor3 = state and Color3.fromRGB(0,200,100) or Color3.fromRGB(80,80,80)
+			toggleFunc(state)
+		end)
+		return
+	end
 
 	-- slider
 	local bar = Instance.new("Frame",row)
 	bar.Size = UDim2.new(0,140,0,6)
 	bar.Position = UDim2.new(0.32,0,0.5,-3)
 	bar.BackgroundColor3 = Color3.fromRGB(60,60,60)
-	Instance.new("UICorner",bar).CornerRadius=UDim.new(1,0)
+	Instance.new("UICorner",bar)
 
 	local fill = Instance.new("Frame",bar)
 	fill.BackgroundColor3 = Color3.fromRGB(0,255,120)
-	fill.Size = UDim2.new(0.5,0,1,0)
-	Instance.new("UICorner",fill).CornerRadius=UDim.new(1,0)
+	Instance.new("UICorner",fill)
 
 	local knob = Instance.new("Frame",bar)
 	knob.Size = UDim2.new(0,14,0,14)
-	knob.Position = UDim2.new(0.5,-7,0.5,-7)
 	knob.BackgroundColor3 = Color3.fromRGB(0,255,120)
-	Instance.new("UICorner",knob).CornerRadius=UDim.new(1,0)
+	Instance.new("UICorner",knob)
 
-	-- value display
 	local valueBox = Instance.new("TextBox",row)
 	valueBox.Size = UDim2.new(0,60,0,30)
 	valueBox.Position = UDim2.new(0.62,0,0.5,-15)
-	valueBox.Text = tostring(get())
 	valueBox.BackgroundColor3 = Color3.fromRGB(20,20,20)
 	valueBox.TextColor3 = Color3.fromRGB(0,255,120)
 
-	-- + -
 	local plus = Instance.new("TextButton",row)
 	plus.Size = UDim2.new(0,30,0,25)
-	plus.Position = UDim2.new(0.52,0,0.2,0)
+	plus.Position = UDim2.new(0.52,0,0.15,0)
 	plus.Text = "+"
 	plus.BackgroundColor3 = Color3.fromRGB(70,70,70)
 
@@ -215,10 +263,9 @@ local function createRow(name,y,get,set,toggleFunc)
 	minus.Text = "-"
 	minus.BackgroundColor3 = Color3.fromRGB(70,70,70)
 
-	-- toggle
 	local toggle = Instance.new("TextButton",row)
-	toggle.Size = UDim2.new(0,80,0,35)
-	toggle.Position = UDim2.new(1,-90,0.5,-18)
+	toggle.Size = UDim2.new(0,90,0,35)
+	toggle.Position = UDim2.new(1,-100,0.5,-18)
 	toggle.Text = "OFF"
 	toggle.BackgroundColor3 = Color3.fromRGB(80,80,80)
 
@@ -241,26 +288,15 @@ local function createRow(name,y,get,set,toggleFunc)
 		if v then update(v) end
 	end)
 
-	plus.MouseButton1Click:Connect(function()
-		update(get()+1)
-	end)
+	plus.MouseButton1Click:Connect(function() update(get()+1) end)
+	minus.MouseButton1Click:Connect(function() update(get()-1) end)
 
-	minus.MouseButton1Click:Connect(function()
-		update(get()-1)
-	end)
-
-	-- slider drag
 	local dragging=false
-
 	bar.InputBegan:Connect(function(i)
-		if i.UserInputType==Enum.UserInputType.MouseButton1 then
-			dragging=true
-		end
+		if i.UserInputType==Enum.UserInputType.MouseButton1 then dragging=true end
 	end)
 
-	UIS.InputEnded:Connect(function()
-		dragging=false
-	end)
+	UIS.InputEnded:Connect(function() dragging=false end)
 
 	UIS.InputChanged:Connect(function(i)
 		if dragging then
@@ -299,10 +335,11 @@ createRow("JUMP",190,
 createRow("NOCLIP",260,
 	function() return 0 end,
 	function() end,
-	function(s) noclipEnabled=s if s then startNoclip() else stopNoclip() end end
+	function(s) noclipEnabled=s if s then startNoclip() else stopNoclip() end,
+	true
 )
 
--- respawn fix
+-- RESPAWN FIX
 player.CharacterAdded:Connect(function()
 	humanoid = getHumanoid()
 
