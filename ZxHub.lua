@@ -69,6 +69,18 @@ title.Text = "ZxHub"
 title.TextColor3 = Color3.fromRGB(0,255,120)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 22
+title.Size = UDim2.new(1,-160,0,40)
+title.Position = UDim2.new(0,160,0,0)
+local credit = Instance.new("TextLabel", frame)
+credit.Size = UDim2.new(0, 160, 0, 40)
+credit.Position = UDim2.new(0, 10, 0, 0)
+credit.BackgroundTransparency = 1
+credit.Text = "by : YouTube ZXzn9"
+credit.TextColor3 = Color3.fromRGB(0,255,120)
+credit.Font = Enum.Font.GothamBold
+credit.TextSize = 14
+credit.TextXAlignment = Enum.TextXAlignment.Left
+
 
 local minBtn = Instance.new("TextButton", frame)
 minBtn.Size = UDim2.new(0,30,0,30)
