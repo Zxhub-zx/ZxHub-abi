@@ -1,240 +1,223 @@
--- ZxHub FINAL (UI + System Complete)
+-- ZxHub (Fixed + Clean UI)
 
 local player = game.Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 
--- =====================
--- COLORS (ปรับให้ใกล้รูป)
--- =====================
-local C = {
-    bg = Color3.fromRGB(16,18,20),
-    row = Color3.fromRGB(30,34,38),
-    stroke = Color3.fromRGB(60,70,75),
-    green = Color3.fromRGB(80,255,140),
-    green2 = Color3.fromRGB(30,200,100),
-    gray = Color3.fromRGB(80,90,100),
-    white = Color3.fromRGB(255,255,255)
-}
+-- ================= CONFIG =================
+local flyEnabled = false
+local speedEnabled = false
+local jumpEnabled = false
+local noclipEnabled = false
 
--- =====================
--- CHARACTER
--- =====================
+local flySpeed = 8
+local walkSpeed = 16
+local jumpPower = 50
+
+-- ================= CHARACTER =================
 local function getChar()
-    return player.Character or player.CharacterAdded:Wait()
+	return player.Character or player.CharacterAdded:Wait()
 end
 
 local function getHumanoid()
-    return getChar():WaitForChild("Humanoid")
+	return getChar():WaitForChild("Humanoid")
 end
 
 local humanoid = getHumanoid()
 
--- =====================
--- STATE
--- =====================
-local flyEnabled, speedEnabled, jumpEnabled, noclipEnabled = false,false,false,false
-local flySpeed, walkSpeed, jumpPower = 8,16,50
-
--- =====================
--- GUI ROOT
--- =====================
-local gui = Instance.new("ScreenGui", player.PlayerGui)
+-- ================= GUI =================
+local gui = Instance.new("ScreenGui")
+gui.Parent = player.PlayerGui
 gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
 
--- =====================
--- MAIN FRAME (Glass)
--- =====================
-local Frame = Instance.new("Frame", gui)
-Frame.Size = UDim2.new(0.36,0,0.52,0)
-Frame.Position = UDim2.new(0.32,0,0.24,0)
-Frame.BackgroundColor3 = C.bg
-Frame.BackgroundTransparency = 0.05
-Frame.Active = true
-Frame.Draggable = true
+-- MAIN FRAME
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 420, 0, 300)
+frame.Position = UDim2.new(0.5, -210, 0.5, -150)
+frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+frame.Parent = gui
 
-Instance.new("UICorner",Frame).CornerRadius = UDim.new(0,12)
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
 
-local stroke = Instance.new("UIStroke",Frame)
-stroke.Color = C.stroke
-stroke.Transparency = 0.4
+-- TITLE
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,0,0,30)
+title.BackgroundTransparency = 1
+title.Text = "ZxHub"
+title.TextColor3 = Color3.fromRGB(0,255,120)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.Parent = frame
 
--- Gradient overlay
-local grad = Instance.new("UIGradient",Frame)
-grad.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(30,35,40)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(10,12,14))
-}
+-- MIN BUTTON
+local minBtn = Instance.new("TextButton")
+minBtn.Size = UDim2.new(0,30,0,30)
+minBtn.Position = UDim2.new(1,-30,0,0)
+minBtn.Text = "-"
+minBtn.Parent = frame
 
--- =====================
--- LOGO (เหมือนรูป 2)
--- =====================
-local Logo = Instance.new("Frame",gui)
-Logo.Size = UDim2.new(0,90,0,90)
-Logo.Position = UDim2.new(0,20,0.5,-45)
-Logo.BackgroundColor3 = C.bg
-Logo.Visible = false
-Instance.new("UICorner",Logo).CornerRadius = UDim.new(1,0)
+-- LOGO (ตอนย่อ)
+local logo = Instance.new("TextButton")
+logo.Size = UDim2.new(0,60,0,60)
+logo.Position = UDim2.new(0,20,0.5,-30)
+logo.Text = "ZX"
+logo.Visible = false
+logo.BackgroundColor3 = Color3.fromRGB(30,30,30)
+logo.TextColor3 = Color3.fromRGB(0,255,120)
+logo.Parent = gui
+Instance.new("UICorner", logo).CornerRadius = UDim.new(1,0)
 
--- outer ring
-local ring = Instance.new("UIStroke",Logo)
-ring.Color = Color3.fromRGB(50,50,50)
-ring.Thickness = 3
+-- DRAG FUNCTION (มือถือ+คอม)
+local function makeDraggable(obj)
+	local dragging, dragInput, startPos, startInput
 
--- green ring glow
-local glow = Instance.new("UIStroke",Logo)
-glow.Color = C.green
-glow.Thickness = 2
+	obj.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 
+		or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			startInput = input.Position
+			startPos = obj.Position
+		end
+	end)
 
-TweenService:Create(glow,TweenInfo.new(1,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut,-1,true),{
-    Thickness = 4
-}):Play()
+	obj.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement 
+		or input.UserInputType == Enum.UserInputType.Touch) then
+			local delta = input.Position - startInput
+			obj.Position = UDim2.new(
+				startPos.X.Scale, startPos.X.Offset + delta.X,
+				startPos.Y.Scale, startPos.Y.Offset + delta.Y
+			)
+		end
+	end)
 
--- text ZX
-local txt = Instance.new("TextLabel",Logo)
-txt.Size = UDim2.new(1,0,1,0)
-txt.Text = "ZX"
-txt.TextColor3 = C.green
-txt.Font = Enum.Font.GothamBlack
-txt.TextScaled = true
-txt.BackgroundTransparency = 1
+	obj.InputEnded:Connect(function()
+		dragging = false
+	end)
+end
 
--- =====================
+makeDraggable(frame)
+makeDraggable(logo)
+
 -- MINIMIZE
--- =====================
-local min = Instance.new("TextButton",Frame)
-min.Size = UDim2.new(0,30,0,30)
-min.Position = UDim2.new(1,-35,0,5)
-min.Text = "-"
-min.BackgroundColor3 = C.gray
-
-min.MouseButton1Click:Connect(function()
-    Frame.Visible = false
-    Logo.Visible = true
+minBtn.MouseButton1Click:Connect(function()
+	frame.Visible = false
+	logo.Visible = true
 end)
 
-Logo.InputBegan:Connect(function()
-    Logo.Visible = false
-    Frame.Visible = true
+logo.MouseButton1Click:Connect(function()
+	frame.Visible = true
+	logo.Visible = false
 end)
 
--- =====================
--- ROW BUILDER
--- =====================
-local function createRow(y,text)
-    local row = Instance.new("Frame",Frame)
-    row.Size = UDim2.new(1,-20,0,70)
-    row.Position = UDim2.new(0,10,0,y)
-    row.BackgroundColor3 = C.row
-    Instance.new("UICorner",row).CornerRadius = UDim.new(0,10)
+-- ================= FUNCTIONS =================
 
-    local stroke = Instance.new("UIStroke",row)
-    stroke.Color = Color3.fromRGB(60,70,75)
+-- FLY
+local flyConn
+local function startFly()
+	local hrp = getChar():WaitForChild("HumanoidRootPart")
 
-    local lbl = Instance.new("TextLabel",row)
-    lbl.Size = UDim2.new(0,160,1,0)
-    lbl.Text = "[ "..text.." ]"
-    lbl.TextColor3 = C.green
-    lbl.Font = Enum.Font.GothamBold
-    lbl.TextSize = 16
-    lbl.BackgroundTransparency = 1
+	local bv = Instance.new("BodyVelocity", hrp)
+	local bg = Instance.new("BodyGyro", hrp)
 
-    return row
+	bv.MaxForce = Vector3.new(1e5,1e5,1e5)
+	bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
+
+	flyConn = RunService.RenderStepped:Connect(function()
+		if not flyEnabled then return end
+
+		local cam = workspace.CurrentCamera
+		local move = Vector3.zero
+
+		if UIS:IsKeyDown(Enum.KeyCode.W) then move += cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.S) then move -= cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.A) then move -= cam.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.D) then move += cam.CFrame.RightVector end
+
+		bv.Velocity = move * flySpeed
+		bg.CFrame = cam.CFrame
+	end)
 end
 
--- =====================
--- SLIDER (เหมือนรูป)
--- =====================
-local function makeSlider(row, value, callback)
-    local track = Instance.new("Frame",row)
-    track.Size = UDim2.new(0,220,0,6)
-    track.Position = UDim2.new(0,190,0.5,8)
-    track.BackgroundColor3 = C.gray
-    Instance.new("UICorner",track)
-
-    local fill = Instance.new("Frame",track)
-    fill.Size = UDim2.new(value/100,0,1,0)
-    fill.BackgroundColor3 = C.green
-    Instance.new("UICorner",fill)
-
-    local knob = Instance.new("Frame",track)
-    knob.Size = UDim2.new(0,14,0,14)
-    knob.Position = UDim2.new(value/100,-7,0.5,-7)
-    knob.BackgroundColor3 = C.green
-    Instance.new("UICorner",knob)
-
-    local dragging=false
-
-    knob.InputBegan:Connect(function(i)
-        if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
-            dragging=true
-        end
-    end)
-
-    UIS.InputEnded:Connect(function()
-        dragging=false
-    end)
-
-    UIS.InputChanged:Connect(function(i)
-        if dragging then
-            local rel = math.clamp((i.Position.X-track.AbsolutePosition.X)/track.AbsoluteSize.X,0,1)
-            local v = math.floor(rel*100)
-            fill.Size = UDim2.new(rel,0,1,0)
-            knob.Position = UDim2.new(rel,-7,0.5,-7)
-            callback(v)
-        end
-    end)
+-- NOCLIP
+local noclipConn
+local function startNoclip()
+	noclipConn = RunService.Stepped:Connect(function()
+		for _,v in pairs(getChar():GetDescendants()) do
+			if v:IsA("BasePart") then
+				v.CanCollide = false
+			end
+		end
+	end)
 end
 
--- =====================
--- TOGGLE (วงรีเหมือนรูป)
--- =====================
-local function makeToggle(row,callback)
-    local bg = Instance.new("Frame",row)
-    bg.Size = UDim2.new(0,90,0,38)
-    bg.Position = UDim2.new(1,-110,0.5,-19)
-    bg.BackgroundColor3 = C.gray
-    Instance.new("UICorner",bg).CornerRadius = UDim.new(1,0)
-
-    local knob = Instance.new("Frame",bg)
-    knob.Size = UDim2.new(0,30,0,30)
-    knob.Position = UDim2.new(0,4,0.5,-15)
-    knob.BackgroundColor3 = C.white
-    Instance.new("UICorner",knob).CornerRadius = UDim.new(1,0)
-
-    local state=false
-
-    bg.InputBegan:Connect(function()
-        state = not state
-
-        TweenService:Create(knob,TweenInfo.new(0.15),{
-            Position = state and UDim2.new(1,-34,0.5,-15) or UDim2.new(0,4,0.5,-15)
-        }):Play()
-
-        TweenService:Create(bg,TweenInfo.new(0.15),{
-            BackgroundColor3 = state and C.green or C.gray
-        }):Play()
-
-        callback(state)
-    end)
+local function stopNoclip()
+	if noclipConn then noclipConn:Disconnect() end
 end
 
--- =====================
--- BUILD
--- =====================
-local rowFly = createRow(30,"FLY")
-makeSlider(rowFly,flySpeed,function(v) flySpeed=v end)
-makeToggle(rowFly,function(s) flyEnabled=s end)
+-- ================= UI ROW =================
+local function createRow(text, y, callback)
+	local row = Instance.new("Frame")
+	row.Size = UDim2.new(1,-20,0,50)
+	row.Position = UDim2.new(0,10,0,y)
+	row.BackgroundColor3 = Color3.fromRGB(35,35,35)
+	row.Parent = frame
+	Instance.new("UICorner", row).CornerRadius = UDim.new(0,10)
 
-local rowSpeed = createRow(120,"SPEED")
-makeSlider(rowSpeed,walkSpeed,function(v) walkSpeed=v humanoid.WalkSpeed=v end)
-makeToggle(rowSpeed,function(s) speedEnabled=s end)
+	local label = Instance.new("TextLabel")
+	label.Text = "[ "..text.." ]"
+	label.TextColor3 = Color3.fromRGB(0,255,120)
+	label.Font = Enum.Font.GothamBold
+	label.Size = UDim2.new(0.4,0,1,0)
+	label.BackgroundTransparency = 1
+	label.Parent = row
 
-local rowJump = createRow(210,"JUMP")
-makeSlider(rowJump,jumpPower,function(v) jumpPower=v humanoid.JumpPower=v end)
-makeToggle(rowJump,function(s) jumpEnabled=s end)
+	local toggle = Instance.new("TextButton")
+	toggle.Size = UDim2.new(0,80,0,30)
+	toggle.Position = UDim2.new(1,-90,0.5,-15)
+	toggle.Text = "OFF"
+	toggle.BackgroundColor3 = Color3.fromRGB(80,80,80)
+	toggle.Parent = row
+	Instance.new("UICorner", toggle)
 
-local rowNoclip = createRow(300,"NOCLIP")
-makeToggle(rowNoclip,function(s) noclipEnabled=s end)
+	local state = false
+
+	toggle.MouseButton1Click:Connect(function()
+		state = not state
+		toggle.Text = state and "ON" or "OFF"
+		toggle.BackgroundColor3 = state and Color3.fromRGB(0,200,100) or Color3.fromRGB(80,80,80)
+		callback(state)
+	end)
+end
+
+-- ================= CREATE ROWS =================
+
+createRow("FLY",40,function(v)
+	flyEnabled = v
+	if v then startFly() end
+end)
+
+createRow("SPEED",100,function(v)
+	speedEnabled = v
+	humanoid.WalkSpeed = v and walkSpeed or 16
+end)
+
+createRow("JUMP",160,function(v)
+	jumpEnabled = v
+	humanoid.JumpPower = v and jumpPower or 50
+end)
+
+createRow("NOCLIP",220,function(v)
+	noclipEnabled = v
+	if v then startNoclip() else stopNoclip() end
+end)
+
+-- ================= RESET ON RESPAWN =================
+player.CharacterAdded:Connect(function()
+	humanoid = getHumanoid()
+
+	if speedEnabled then humanoid.WalkSpeed = walkSpeed end
+	if jumpEnabled then humanoid.JumpPower = jumpPower end
+	if noclipEnabled then startNoclip() end
+	if flyEnabled then startFly() end
+end)
