@@ -62,18 +62,21 @@ local glow = Instance.new("UIStroke", frame)
 glow.Color = Color3.fromRGB(0,255,120)
 glow.Thickness = 2
 
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,40)
+local topBar = Instance.new("Frame", frame)
+topBar.Size = UDim2.new(1,0,0,40)
+topBar.BackgroundTransparency = 1
+
+local title = Instance.new("TextLabel", topBar)
+title.Size = UDim2.new(1,0,1,0)
 title.BackgroundTransparency = 1
 title.Text = "ZxHub"
 title.TextColor3 = Color3.fromRGB(0,255,120)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 22
-title.Size = UDim2.new(1,0,0,40)
-title.Position = UDim2.new(0,0,0,0)
 title.TextXAlignment = Enum.TextXAlignment.Center
-local credit = Instance.new("TextLabel", frame)
-credit.Size = UDim2.new(0, 160, 0, 40)
+
+local credit = Instance.new("TextLabel", topBar)
+credit.Size = UDim2.new(0, 200, 1, 0)
 credit.Position = UDim2.new(0, 10, 0, 0)
 credit.BackgroundTransparency = 1
 credit.Text = "by : YouTube ZXzn9"
