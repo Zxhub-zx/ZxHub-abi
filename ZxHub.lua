@@ -1,4 +1,4 @@
--- ZxHub PRO FIX
+-- ZxHub PRO FINAL UI
 
 local player = game.Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
@@ -29,19 +29,18 @@ local humanoid = getHumanoid()
 local gui = Instance.new("ScreenGui", player.PlayerGui)
 gui.ResetOnSpawn = false
 
--- MAIN
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.new(0, 520, 0, 360)
 frame.Position = UDim2.new(0.5,-260,0.5,-180)
 frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0,14)
 
--- GLOW
+-- glow
 local glow = Instance.new("UIStroke", frame)
 glow.Color = Color3.fromRGB(0,255,120)
 glow.Thickness = 2
 
--- TITLE
+-- title
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,40)
 title.BackgroundTransparency = 1
@@ -50,14 +49,14 @@ title.TextColor3 = Color3.fromRGB(0,255,120)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 22
 
--- MIN BUTTON
+-- minimize
 local minBtn = Instance.new("TextButton", frame)
 minBtn.Size = UDim2.new(0,30,0,30)
 minBtn.Position = UDim2.new(1,-35,0,5)
 minBtn.Text = "-"
 minBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
 
--- LOGO (วง + glow)
+-- logo
 local logo = Instance.new("TextButton", gui)
 logo.Size = UDim2.new(0,70,0,70)
 logo.Position = UDim2.new(0,20,0.5,-35)
@@ -71,7 +70,7 @@ local stroke = Instance.new("UIStroke", logo)
 stroke.Color = Color3.fromRGB(0,255,120)
 stroke.Thickness = 2
 
--- DRAG
+-- drag
 local function dragify(obj)
 	local drag=false
 	local start, pos
@@ -85,7 +84,7 @@ local function dragify(obj)
 	end)
 
 	UIS.InputChanged:Connect(function(i)
-		if drag and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then
+		if drag then
 			local d=i.Position-start
 			obj.Position=UDim2.new(pos.X.Scale,pos.X.Offset+d.X,pos.Y.Scale,pos.Y.Offset+d.Y)
 		end
@@ -111,7 +110,6 @@ end)
 
 -- ================= SYSTEM =================
 
--- FLY
 local flyConn, bv, bg
 
 local function startFly()
@@ -145,7 +143,6 @@ local function stopFly()
 	if bg then bg:Destroy() end
 end
 
--- NOCLIP
 local noclipConn
 local function startNoclip()
 	noclipConn = RunService.Stepped:Connect(function()
@@ -161,45 +158,117 @@ local function stopNoclip()
 	if noclipConn then noclipConn:Disconnect() end
 end
 
--- ================= UI ROW =================
+-- ================= UI ROW (เหมือนรูป) =================
 local function createRow(name,y,get,set,toggleFunc)
 
 	local row = Instance.new("Frame", frame)
-	row.Size = UDim2.new(1,-20,0,60)
+	row.Size = UDim2.new(1,-20,0,70)
 	row.Position = UDim2.new(0,10,0,y)
-	row.BackgroundColor3 = Color3.fromRGB(35,35,35)
-	Instance.new("UICorner",row).CornerRadius=UDim.new(0,12)
+	row.BackgroundColor3 = Color3.fromRGB(30,30,30)
+	Instance.new("UICorner",row).CornerRadius=UDim.new(0,14)
 
 	-- label
 	local lbl = Instance.new("TextLabel",row)
 	lbl.Text = "[ "..name.." ]"
 	lbl.TextColor3 = Color3.fromRGB(0,255,120)
 	lbl.Font = Enum.Font.GothamBold
-	lbl.Size = UDim2.new(0.3,0,1,0)
+	lbl.TextSize = 16
+	lbl.Size = UDim2.new(0.25,0,1,0)
 	lbl.BackgroundTransparency=1
 
-	-- value box
-	local box = Instance.new("TextBox",row)
-	box.Size = UDim2.new(0,60,0,30)
-	box.Position = UDim2.new(0.4,0,0.5,-15)
-	box.Text = tostring(get())
-	box.BackgroundColor3 = Color3.fromRGB(60,60,60)
+	-- slider
+	local bar = Instance.new("Frame",row)
+	bar.Size = UDim2.new(0,140,0,6)
+	bar.Position = UDim2.new(0.32,0,0.5,-3)
+	bar.BackgroundColor3 = Color3.fromRGB(60,60,60)
+	Instance.new("UICorner",bar).CornerRadius=UDim.new(1,0)
 
-	box.FocusLost:Connect(function()
-		local v = tonumber(box.Text)
-		if v then
-			set(v)
-		end
-	end)
+	local fill = Instance.new("Frame",bar)
+	fill.BackgroundColor3 = Color3.fromRGB(0,255,120)
+	fill.Size = UDim2.new(0.5,0,1,0)
+	Instance.new("UICorner",fill).CornerRadius=UDim.new(1,0)
+
+	local knob = Instance.new("Frame",bar)
+	knob.Size = UDim2.new(0,14,0,14)
+	knob.Position = UDim2.new(0.5,-7,0.5,-7)
+	knob.BackgroundColor3 = Color3.fromRGB(0,255,120)
+	Instance.new("UICorner",knob).CornerRadius=UDim.new(1,0)
+
+	-- value display
+	local valueBox = Instance.new("TextBox",row)
+	valueBox.Size = UDim2.new(0,60,0,30)
+	valueBox.Position = UDim2.new(0.62,0,0.5,-15)
+	valueBox.Text = tostring(get())
+	valueBox.BackgroundColor3 = Color3.fromRGB(20,20,20)
+	valueBox.TextColor3 = Color3.fromRGB(0,255,120)
+
+	-- + -
+	local plus = Instance.new("TextButton",row)
+	plus.Size = UDim2.new(0,30,0,25)
+	plus.Position = UDim2.new(0.52,0,0.2,0)
+	plus.Text = "+"
+	plus.BackgroundColor3 = Color3.fromRGB(70,70,70)
+
+	local minus = Instance.new("TextButton",row)
+	minus.Size = UDim2.new(0,30,0,25)
+	minus.Position = UDim2.new(0.52,0,0.55,0)
+	minus.Text = "-"
+	minus.BackgroundColor3 = Color3.fromRGB(70,70,70)
 
 	-- toggle
 	local toggle = Instance.new("TextButton",row)
-	toggle.Size = UDim2.new(0,80,0,30)
-	toggle.Position = UDim2.new(1,-90,0.5,-15)
+	toggle.Size = UDim2.new(0,80,0,35)
+	toggle.Position = UDim2.new(1,-90,0.5,-18)
 	toggle.Text = "OFF"
 	toggle.BackgroundColor3 = Color3.fromRGB(80,80,80)
 
 	local state=false
+
+	local function update(v)
+		v = math.clamp(v,1,200)
+		set(v)
+		valueBox.Text = tostring(v)
+
+		local percent = v/200
+		fill.Size = UDim2.new(percent,0,1,0)
+		knob.Position = UDim2.new(percent,-7,0.5,-7)
+	end
+
+	update(get())
+
+	valueBox.FocusLost:Connect(function()
+		local v = tonumber(valueBox.Text)
+		if v then update(v) end
+	end)
+
+	plus.MouseButton1Click:Connect(function()
+		update(get()+1)
+	end)
+
+	minus.MouseButton1Click:Connect(function()
+		update(get()-1)
+	end)
+
+	-- slider drag
+	local dragging=false
+
+	bar.InputBegan:Connect(function(i)
+		if i.UserInputType==Enum.UserInputType.MouseButton1 then
+			dragging=true
+		end
+	end)
+
+	UIS.InputEnded:Connect(function()
+		dragging=false
+	end)
+
+	UIS.InputChanged:Connect(function(i)
+		if dragging then
+			local x = (i.Position.X - bar.AbsolutePosition.X)/bar.AbsoluteSize.X
+			update(math.floor(x*200))
+		end
+	end)
+
 	toggle.MouseButton1Click:Connect(function()
 		state=not state
 		toggle.Text = state and "ON" or "OFF"
@@ -209,44 +278,31 @@ local function createRow(name,y,get,set,toggleFunc)
 end
 
 -- ================= CREATE =================
-
 createRow("FLY",50,
 	function() return flySpeed end,
 	function(v) flySpeed=v end,
-	function(s)
-		flyEnabled=s
-		if s then startFly() else stopFly() end
-	end
+	function(s) flyEnabled=s if s then startFly() else stopFly() end end
 )
 
 createRow("SPEED",120,
 	function() return walkSpeed end,
 	function(v) walkSpeed=v if speedEnabled then humanoid.WalkSpeed=v end end,
-	function(s)
-		speedEnabled=s
-		humanoid.WalkSpeed = s and walkSpeed or 16
-	end
+	function(s) speedEnabled=s humanoid.WalkSpeed = s and walkSpeed or 16 end
 )
 
 createRow("JUMP",190,
 	function() return jumpPower end,
 	function(v) jumpPower=v if jumpEnabled then humanoid.JumpPower=v end end,
-	function(s)
-		jumpEnabled=s
-		humanoid.JumpPower = s and jumpPower or 50
-	end
+	function(s) jumpEnabled=s humanoid.JumpPower = s and jumpPower or 50 end
 )
 
 createRow("NOCLIP",260,
 	function() return 0 end,
 	function() end,
-	function(s)
-		noclipEnabled=s
-		if s then startNoclip() else stopNoclip() end
-	end
+	function(s) noclipEnabled=s if s then startNoclip() else stopNoclip() end end
 )
 
--- RESPAWN FIX
+-- respawn fix
 player.CharacterAdded:Connect(function()
 	humanoid = getHumanoid()
 
