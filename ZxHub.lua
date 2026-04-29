@@ -213,12 +213,28 @@ local function startFly()
 		local cam = workspace.CurrentCamera
 		local dir = Vector3.zero
 
+		-- ✅ แก้: รองรับ thumbstick มือถือ
+		local moveVec = UIS:GetStringForKeyCode(Enum.KeyCode.Thumbstick1) ~= "" 
+			and Vector3.zero or Vector3.zero
+
+		local thumbstick = UIS:GetConnectedGamepads()
+		-- อ่านค่า thumbstick จาก Humanoid.MoveDirection แทน (รองรับมือถือ Roblox)
+		local hum2 = char:FindFirstChildOfClass("Humanoid")
+		if hum2 then
+			local md = hum2.MoveDirection
+			if md.Magnitude > 0.1 then
+				dir += Vector3.new(md.X, 0, md.Z)
+			end
+		end
+
 		if UIS:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
 		if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
 		if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
 		if UIS:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
 		if up then dir += Vector3.new(0,1,0) end
 		if down then dir -= Vector3.new(0,1,0) end
+
+		if dir.Magnitude > 1 then dir = dir.Unit end
 
 		flyBV.Velocity = dir * flySpeed
 		flyBG.CFrame = cam.CFrame
@@ -284,7 +300,6 @@ local function createRow(name, yPos, getVal, setVal, toggle, noSlider)
 	label.TextSize = 14
 	label.TextXAlignment = Enum.TextXAlignment.Left
 
-	-- Toggle Button
 	local togBtn = Instance.new("TextButton", row)
 	togBtn.Size = UDim2.new(0,54,0,28)
 	togBtn.Position = UDim2.new(1,-64,0.5,-14)
@@ -303,39 +318,56 @@ local function createRow(name, yPos, getVal, setVal, toggle, noSlider)
 		toggle(on)
 	end)
 
-	-- Slider (ถ้าไม่ใช่ noSlider)
 	if not noSlider then
+		local maxVal = 500 -- ✅ แก้: ทุก slider ใช้ max 500
+
 		local sliderBg = Instance.new("Frame", row)
-		sliderBg.Size = UDim2.new(0,160,0,10)
+		sliderBg.Size = UDim2.new(0,140,0,10)
 		sliderBg.Position = UDim2.new(0,90,0.5,-5)
 		sliderBg.BackgroundColor3 = Color3.fromRGB(60,60,60)
 		Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(1,0)
 
 		local fill = Instance.new("Frame", sliderBg)
-		fill.Size = UDim2.new(0.5,0,1,0)
+		fill.Size = UDim2.new(getVal()/maxVal, 0, 1, 0)
 		fill.BackgroundColor3 = Color3.fromRGB(0,255,120)
 		fill.BorderSizePixel = 0
 		Instance.new("UICorner", fill).CornerRadius = UDim.new(1,0)
 
-		local valLabel = Instance.new("TextLabel", row)
-		valLabel.Size = UDim2.new(0,40,1,0)
-		valLabel.Position = UDim2.new(0,255,0,0)
-		valLabel.BackgroundTransparency = 1
-		valLabel.TextColor3 = Color3.fromRGB(0,255,120)
-		valLabel.Font = Enum.Font.Gotham
-		valLabel.TextSize = 13
-		valLabel.Text = tostring(getVal())
+		-- ✅ แก้: valLabel เปลี่ยนเป็น TextBox กรอกเลขได้
+		local valBox = Instance.new("TextBox", row)
+		valBox.Size = UDim2.new(0,45,0,26)
+		valBox.Position = UDim2.new(0,235,0.5,-13)
+		valBox.BackgroundColor3 = Color3.fromRGB(45,45,45)
+		valBox.TextColor3 = Color3.fromRGB(0,255,120)
+		valBox.Font = Enum.Font.GothamBold
+		valBox.TextSize = 13
+		valBox.Text = tostring(getVal())
+		valBox.ClearTextOnFocus = true
+		Instance.new("UICorner", valBox).CornerRadius = UDim.new(0,4)
 
-		local maxVal = name == "SPEED" and 200 or (name == "JUMP" and 200 or 50)
+		local function applyVal(v)
+			v = math.clamp(math.floor(v), 0, maxVal)
+			fill.Size = UDim2.new(v/maxVal, 0, 1, 0)
+			valBox.Text = tostring(v)
+			setVal(v)
+		end
+
+		-- ✅ กรอกเลขแล้วกด Enter
+		valBox.FocusLost:Connect(function(enterPressed)
+			local num = tonumber(valBox.Text)
+			if num then
+				applyVal(num)
+			else
+				valBox.Text = tostring(getVal())
+			end
+		end)
+
 		local dragging = false
 
 		local function updateSlider(input)
 			local rel = (input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X
 			rel = math.clamp(rel, 0, 1)
-			local val = math.floor(rel * maxVal)
-			fill.Size = UDim2.new(rel, 0, 1, 0)
-			valLabel.Text = tostring(val)
-			setVal(val)
+			applyVal(math.floor(rel * maxVal))
 		end
 
 		sliderBg.InputBegan:Connect(function(i)
@@ -346,9 +378,7 @@ local function createRow(name, yPos, getVal, setVal, toggle, noSlider)
 		end)
 
 		UIS.InputChanged:Connect(function(i)
-			if dragging then
-				updateSlider(i)
-			end
+			if dragging then updateSlider(i) end
 		end)
 
 		UIS.InputEnded:Connect(function(i)
