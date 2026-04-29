@@ -187,6 +187,17 @@ end)
 local flyConn
 local flyBV, flyBG
 
+local function stopFly()
+	if flyConn then flyConn:Disconnect() flyConn = nil end
+	if flyBV then flyBV:Destroy() flyBV = nil end
+	if flyBG then flyBG:Destroy() flyBG = nil end
+	upBtn.Visible = false
+	downBtn.Visible = false
+	pcall(function()
+		getChar():WaitForChild("Humanoid").PlatformStand = false
+	end)
+end
+
 local function startFly()
 	local char = getChar()
 	local root = char:WaitForChild("HumanoidRootPart")
@@ -224,26 +235,24 @@ local function startFly()
 		if down then dir -= Vector3.new(0,1,0) end
 
 		if dir.Magnitude > 1 then dir = dir.Unit end
-
 		flyBV.Velocity = dir * flySpeed
 		flyBG.CFrame = cam.CFrame
 	end)
 end
 
-local function stopFly()
-	if flyConn then flyConn:Disconnect() flyConn = nil end
-	if flyBV then flyBV:Destroy() flyBV = nil end
-	if flyBG then flyBG:Destroy() flyBG = nil end
-
-	upBtn.Visible = false
-	downBtn.Visible = false
-
-	pcall(function()
-		getChar():WaitForChild("Humanoid").PlatformStand = false
-	end)
-end
-
 local noclipConn
+
+local function stopNoclip()
+	if noclipConn then noclipConn:Disconnect() noclipConn = nil end
+	local char = player.Character
+	if char then
+		for _, part in ipairs(char:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = true
+			end
+		end
+	end
+end
 
 local function startNoclip()
 	noclipConn = RunService.Stepped:Connect(function()
@@ -257,15 +266,24 @@ local function startNoclip()
 	end)
 end
 
-local function stopNoclip()
-	if noclipConn then noclipConn:Disconnect() noclipConn = nil end
-	local char = player.Character
-	if char then
-		for _, part in ipairs(char:GetDescendants()) do
-			if part:IsA("BasePart") then
-				part.CanCollide = true
-			end
-		end
+local diedConn
+
+local function cleanup()
+	flyEnabled = false
+	speedEnabled = false
+	jumpEnabled = false
+	noclipEnabled = false
+
+	stopFly()
+	stopNoclip()
+
+	if diedConn then
+		diedConn:Disconnect()
+		diedConn = nil
+	end
+
+	if gui then
+		gui:Destroy()
 	end
 end
 
@@ -351,8 +369,7 @@ local function createRow(name, yPos, getVal, setVal, toggle, noSlider)
 
 		local function updateSlider(input)
 			local rel = (input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X
-			rel = math.clamp(rel, 0, 1)
-			applyVal(math.floor(rel * maxVal))
+			applyVal(math.floor(math.clamp(rel,0,1) * maxVal))
 		end
 
 		sliderBg.InputBegan:Connect(function(i)
@@ -401,7 +418,14 @@ createRow("NOCLIP", 260,
 
 player.CharacterAdded:Connect(function()
 	task.wait(1)
+
 	humanoid = getHumanoid()
+
+	if diedConn then diedConn:Disconnect() end
+
+	diedConn = humanoid.Died:Connect(function()
+		cleanup()
+	end)
 
 	if speedEnabled then humanoid.WalkSpeed = walkSpeed end
 	if jumpEnabled then humanoid.JumpPower = jumpPower end
