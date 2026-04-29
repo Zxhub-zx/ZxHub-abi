@@ -1,4 +1,4 @@
--- ZxHub PRO FINAL (UI FIX ONLY - FULL ORIGINAL)
+-- ZxHub PRO FINAL (COMPLETE)
 
 -- ================= SAFE LOAD =================
 if not game:IsLoaded() then
@@ -75,6 +75,8 @@ minBtn.Size = UDim2.new(0,30,0,30)
 minBtn.Position = UDim2.new(1,-35,0,5)
 minBtn.Text = "-"
 minBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+minBtn.TextColor3 = Color3.fromRGB(255,255,255)
+Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0,6)
 
 local logo = Instance.new("TextButton", gui)
 logo.Size = UDim2.new(0,70,0,70)
@@ -83,47 +85,93 @@ logo.Text = "ZX"
 logo.Visible = false
 logo.BackgroundColor3 = Color3.fromRGB(15,15,15)
 logo.TextColor3 = Color3.fromRGB(0,255,120)
+logo.Font = Enum.Font.GothamBold
+logo.TextSize = 18
 Instance.new("UICorner", logo).CornerRadius = UDim.new(1,0)
 
 local stroke = Instance.new("UIStroke", logo)
 stroke.Color = Color3.fromRGB(0,255,120)
 stroke.Thickness = 2
 
--- ================= MOBILE =================
+-- ================= MOBILE BUTTONS =================
 local upBtn = Instance.new("TextButton", gui)
 upBtn.Size = UDim2.new(0,60,0,60)
 upBtn.Position = UDim2.new(1,-80,0.7,0)
 upBtn.Text = "↑"
 upBtn.Visible = false
+upBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+upBtn.TextColor3 = Color3.fromRGB(0,255,120)
+upBtn.Font = Enum.Font.GothamBold
+upBtn.TextSize = 24
+Instance.new("UICorner", upBtn).CornerRadius = UDim.new(0,10)
 
 local downBtn = Instance.new("TextButton", gui)
 downBtn.Size = UDim2.new(0,60,0,60)
 downBtn.Position = UDim2.new(1,-80,0.8,0)
 downBtn.Text = "↓"
 downBtn.Visible = false
+downBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+downBtn.TextColor3 = Color3.fromRGB(0,255,120)
+downBtn.Font = Enum.Font.GothamBold
+downBtn.TextSize = 24
+Instance.new("UICorner", downBtn).CornerRadius = UDim.new(0,10)
+
+upBtn.InputBegan:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
+		up = true
+	end
+end)
+upBtn.InputEnded:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
+		up = false
+	end
+end)
+
+downBtn.InputBegan:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
+		down = true
+	end
+end)
+downBtn.InputEnded:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
+		down = false
+	end
+end)
+
+-- ================= KEYBOARD UP/DOWN =================
+UIS.InputBegan:Connect(function(i, gp)
+	if gp then return end
+	if i.KeyCode == Enum.KeyCode.Space then up = true end
+	if i.KeyCode == Enum.KeyCode.LeftControl then down = true end
+end)
+
+UIS.InputEnded:Connect(function(i)
+	if i.KeyCode == Enum.KeyCode.Space then up = false end
+	if i.KeyCode == Enum.KeyCode.LeftControl then down = false end
+end)
 
 -- ================= DRAG =================
 local function dragify(obj)
-	local drag=false
+	local drag = false
 	local start, pos
 
 	obj.InputBegan:Connect(function(i)
-		if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
-			drag=true
-			start=i.Position
-			pos=obj.Position
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			drag = true
+			start = i.Position
+			pos = obj.Position
 		end
 	end)
 
 	UIS.InputChanged:Connect(function(i)
 		if drag then
-			local d=i.Position-start
-			obj.Position=UDim2.new(pos.X.Scale,pos.X.Offset+d.X,pos.Y.Scale,pos.Y.Offset+d.Y)
+			local d = i.Position - start
+			obj.Position = UDim2.new(pos.X.Scale, pos.X.Offset+d.X, pos.Y.Scale, pos.Y.Offset+d.Y)
 		end
 	end)
 
 	UIS.InputEnded:Connect(function()
-		drag=false
+		drag = false
 	end)
 end
 
@@ -131,42 +179,209 @@ dragify(frame)
 dragify(logo)
 
 minBtn.MouseButton1Click:Connect(function()
-	frame.Visible=false
-	logo.Visible=true
+	frame.Visible = false
+	logo.Visible = true
 end)
 
 logo.MouseButton1Click:Connect(function()
-	frame.Visible=true
-	logo.Visible=false
+	frame.Visible = true
+	logo.Visible = false
 end)
 
--- ================= (เอาของ createRow เดิมนายมาใส่ตรงนี้) =================
--- ❗ สำคัญ: ห้ามลบ createRow และ createRow(...) ด้านล่างเด็ดขาด
+-- ================= FLY =================
+local flyConn
+local flyBV, flyBG
 
--- ================= CREATE =================
--- ❗ ใส่ 4 บรรทัดนี้กลับ
-createRow("FLY",50,
+local function startFly()
+	local char = getChar()
+	local root = char:WaitForChild("HumanoidRootPart")
+	local hum = char:WaitForChild("Humanoid")
+	hum.PlatformStand = true
+
+	flyBG = Instance.new("BodyGyro", root)
+	flyBG.MaxTorque = Vector3.new(1e5,1e5,1e5)
+	flyBG.D = 50
+
+	flyBV = Instance.new("BodyVelocity", root)
+	flyBV.MaxForce = Vector3.new(1e5,1e5,1e5)
+	flyBV.Velocity = Vector3.zero
+
+	upBtn.Visible = true
+	downBtn.Visible = true
+
+	flyConn = RunService.Heartbeat:Connect(function()
+		local cam = workspace.CurrentCamera
+		local dir = Vector3.zero
+
+		if UIS:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
+		if up then dir += Vector3.new(0,1,0) end
+		if down then dir -= Vector3.new(0,1,0) end
+
+		flyBV.Velocity = dir * flySpeed
+		flyBG.CFrame = cam.CFrame
+	end)
+end
+
+local function stopFly()
+	if flyConn then flyConn:Disconnect() flyConn = nil end
+	if flyBV then flyBV:Destroy() flyBV = nil end
+	if flyBG then flyBG:Destroy() flyBG = nil end
+
+	upBtn.Visible = false
+	downBtn.Visible = false
+
+	pcall(function()
+		getChar():WaitForChild("Humanoid").PlatformStand = false
+	end)
+end
+
+-- ================= NOCLIP =================
+local noclipConn
+
+local function startNoclip()
+	noclipConn = RunService.Stepped:Connect(function()
+		local char = player.Character
+		if not char then return end
+		for _, part in ipairs(char:GetDescendants()) do
+			if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+				part.CanCollide = false
+			end
+		end
+	end)
+end
+
+local function stopNoclip()
+	if noclipConn then noclipConn:Disconnect() noclipConn = nil end
+	local char = player.Character
+	if char then
+		for _, part in ipairs(char:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = true
+			end
+		end
+	end
+end
+
+-- ================= CREATE ROW =================
+local function createRow(name, yPos, getVal, setVal, toggle, noSlider)
+	local row = Instance.new("Frame", frame)
+	row.Size = UDim2.new(1,-20,0,50)
+	row.Position = UDim2.new(0,10,0,yPos)
+	row.BackgroundColor3 = Color3.fromRGB(30,30,30)
+	row.BorderSizePixel = 0
+	Instance.new("UICorner", row).CornerRadius = UDim.new(0,8)
+
+	local label = Instance.new("TextLabel", row)
+	label.Size = UDim2.new(0,80,1,0)
+	label.Position = UDim2.new(0,10,0,0)
+	label.BackgroundTransparency = 1
+	label.Text = name
+	label.TextColor3 = Color3.fromRGB(255,255,255)
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 14
+	label.TextXAlignment = Enum.TextXAlignment.Left
+
+	-- Toggle Button
+	local togBtn = Instance.new("TextButton", row)
+	togBtn.Size = UDim2.new(0,54,0,28)
+	togBtn.Position = UDim2.new(1,-64,0.5,-14)
+	togBtn.Text = "OFF"
+	togBtn.Font = Enum.Font.GothamBold
+	togBtn.TextSize = 12
+	togBtn.TextColor3 = Color3.fromRGB(255,255,255)
+	togBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
+	Instance.new("UICorner", togBtn).CornerRadius = UDim.new(0,6)
+
+	local on = false
+	togBtn.MouseButton1Click:Connect(function()
+		on = not on
+		togBtn.Text = on and "ON" or "OFF"
+		togBtn.BackgroundColor3 = on and Color3.fromRGB(0,200,80) or Color3.fromRGB(80,80,80)
+		toggle(on)
+	end)
+
+	-- Slider (ถ้าไม่ใช่ noSlider)
+	if not noSlider then
+		local sliderBg = Instance.new("Frame", row)
+		sliderBg.Size = UDim2.new(0,160,0,10)
+		sliderBg.Position = UDim2.new(0,90,0.5,-5)
+		sliderBg.BackgroundColor3 = Color3.fromRGB(60,60,60)
+		Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(1,0)
+
+		local fill = Instance.new("Frame", sliderBg)
+		fill.Size = UDim2.new(0.5,0,1,0)
+		fill.BackgroundColor3 = Color3.fromRGB(0,255,120)
+		fill.BorderSizePixel = 0
+		Instance.new("UICorner", fill).CornerRadius = UDim.new(1,0)
+
+		local valLabel = Instance.new("TextLabel", row)
+		valLabel.Size = UDim2.new(0,40,1,0)
+		valLabel.Position = UDim2.new(0,255,0,0)
+		valLabel.BackgroundTransparency = 1
+		valLabel.TextColor3 = Color3.fromRGB(0,255,120)
+		valLabel.Font = Enum.Font.Gotham
+		valLabel.TextSize = 13
+		valLabel.Text = tostring(getVal())
+
+		local maxVal = name == "SPEED" and 200 or (name == "JUMP" and 200 or 50)
+		local dragging = false
+
+		local function updateSlider(input)
+			local rel = (input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X
+			rel = math.clamp(rel, 0, 1)
+			local val = math.floor(rel * maxVal)
+			fill.Size = UDim2.new(rel, 0, 1, 0)
+			valLabel.Text = tostring(val)
+			setVal(val)
+		end
+
+		sliderBg.InputBegan:Connect(function(i)
+			if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+				dragging = true
+				updateSlider(i)
+			end
+		end)
+
+		UIS.InputChanged:Connect(function(i)
+			if dragging then
+				updateSlider(i)
+			end
+		end)
+
+		UIS.InputEnded:Connect(function(i)
+			if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+				dragging = false
+			end
+		end)
+	end
+end
+
+-- ================= CREATE ROWS =================
+createRow("FLY", 50,
 	function() return flySpeed end,
-	function(v) flySpeed=v end,
-	function(s) flyEnabled=s if s then startFly() else stopFly() end end
+	function(v) flySpeed = v end,
+	function(s) flyEnabled = s if s then startFly() else stopFly() end end
 )
 
-createRow("SPEED",120,
+createRow("SPEED", 120,
 	function() return walkSpeed end,
-	function(v) walkSpeed=v if speedEnabled then humanoid.WalkSpeed=v end end,
-	function(s) speedEnabled=s humanoid.WalkSpeed = s and walkSpeed or 16 end
+	function(v) walkSpeed = v if speedEnabled then humanoid.WalkSpeed = v end end,
+	function(s) speedEnabled = s humanoid.WalkSpeed = s and walkSpeed or 16 end
 )
 
-createRow("JUMP",190,
+createRow("JUMP", 190,
 	function() return jumpPower end,
-	function(v) jumpPower=v if jumpEnabled then humanoid.JumpPower=v end end,
-	function(s) jumpEnabled=s humanoid.JumpPower = s and jumpPower or 50 end
+	function(v) jumpPower = v if jumpEnabled then humanoid.JumpPower = v end end,
+	function(s) jumpEnabled = s humanoid.JumpPower = s and jumpPower or 50 end
 )
 
-createRow("NOCLIP",260,
+createRow("NOCLIP", 260,
 	function() return 0 end,
 	function() end,
-	function(s) noclipEnabled=s if s then startNoclip() else stopNoclip() end,
+	function(s) noclipEnabled = s if s then startNoclip() else stopNoclip() end end,
 	true
 )
 
@@ -175,8 +390,8 @@ player.CharacterAdded:Connect(function()
 	task.wait(1)
 	humanoid = getHumanoid()
 
-	if speedEnabled then humanoid.WalkSpeed=walkSpeed end
-	if jumpEnabled then humanoid.JumpPower=jumpPower end
+	if speedEnabled then humanoid.WalkSpeed = walkSpeed end
+	if jumpEnabled then humanoid.JumpPower = jumpPower end
 	if noclipEnabled then startNoclip() end
 	if flyEnabled then startFly() end
 end)
