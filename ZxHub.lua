@@ -1,10 +1,13 @@
--- ZxHub FIXED VERSION
+-- ZxHub PRO (Mobile + PC Ready)
 
 local player = game.Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
+-- =====================
+-- CHARACTER
+-- =====================
 local function getChar()
     return player.Character or player.CharacterAdded:Wait()
 end
@@ -15,7 +18,9 @@ end
 
 local humanoid = getHumanoid()
 
--- ✅ DEFAULT = OFF
+-- =====================
+-- STATE
+-- =====================
 local flyEnabled    = false
 local speedEnabled  = false
 local jumpEnabled   = false
@@ -28,47 +33,131 @@ local jumpPower = 50
 local flyConn, noclipConn
 local bv, bg
 
--- GUI
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ZxHub"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = player.PlayerGui
+-- =====================
+-- GUI ROOT
+-- =====================
+local gui = Instance.new("ScreenGui")
+gui.Name = "ZxHubPro"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
 
--- ======================
--- MAIN FRAME (Responsive)
--- ======================
+-- =====================
+-- COLORS
+-- =====================
+local C = {
+    bg = Color3.fromRGB(20,22,24),
+    row = Color3.fromRGB(35,40,45),
+    green = Color3.fromRGB(0,255,140),
+    dark = Color3.fromRGB(60,60,60),
+    white = Color3.fromRGB(255,255,255)
+}
+
+-- =====================
+-- MAIN FRAME
+-- =====================
 local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0.4,0,0.5,0)
-Frame.Position = UDim2.new(0.3,0,0.25,0)
-Frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-Frame.Parent = ScreenGui
+Frame.Size = UDim2.new(0.35,0,0.5,0)
+Frame.Position = UDim2.new(0.325,0,0.25,0)
+Frame.BackgroundColor3 = C.bg
+Frame.Parent = gui
 Frame.Active = true
 Frame.Draggable = true
 
-Instance.new("UICorner", Frame).CornerRadius = UDim.new(0,10)
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0,12)
 
--- ======================
--- LOGO BUTTON (ย่อ)
--- ======================
-local LogoBtn = Instance.new("TextButton")
-LogoBtn.Size = UDim2.new(0,60,0,60)
-LogoBtn.Position = UDim2.new(0,20,0.5,-30)
-LogoBtn.Text = "ZX"
-LogoBtn.Visible = false
-LogoBtn.BackgroundColor3 = Color3.fromRGB(20,20,20)
-LogoBtn.Parent = ScreenGui
+local stroke = Instance.new("UIStroke", Frame)
+stroke.Color = C.green
+stroke.Transparency = 0.6
 
-Instance.new("UICorner", LogoBtn).CornerRadius = UDim.new(1,0)
+-- =====================
+-- LOGO (MINIMIZE)
+-- =====================
+local Logo = Instance.new("TextButton")
+Logo.Size = UDim2.new(0,60,0,60)
+Logo.Position = UDim2.new(0,20,0.5,-30)
+Logo.Text = "ZX"
+Logo.TextColor3 = C.green
+Logo.BackgroundColor3 = C.bg
+Logo.Visible = false
+Logo.Parent = gui
 
--- ======================
--- TOGGLE FUNCTION
--- ======================
+Instance.new("UICorner", Logo).CornerRadius = UDim.new(1,0)
+
+-- drag logo (มือถือ + pc)
+local dragging = false
+local dragStart, startPos
+
+Logo.InputBegan:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = inp.Position
+        startPos = Logo.Position
+    end
+end)
+
+Logo.InputEnded:Connect(function()
+    dragging = false
+end)
+
+UIS.InputChanged:Connect(function(inp)
+    if dragging then
+        local delta = inp.Position - dragStart
+        Logo.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+Logo.MouseButton1Click:Connect(function()
+    Logo.Visible = false
+    Frame.Visible = true
+end)
+
+-- =====================
+-- MINIMIZE BUTTON
+-- =====================
+local minBtn = Instance.new("TextButton")
+minBtn.Size = UDim2.new(0,30,0,30)
+minBtn.Position = UDim2.new(1,-35,0,5)
+minBtn.Text = "-"
+minBtn.Parent = Frame
+
+minBtn.MouseButton1Click:Connect(function()
+    Frame.Visible = false
+    Logo.Visible = true
+end)
+
+-- =====================
+-- ROW CREATOR
+-- =====================
+local function createRow(y,text)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1,-20,0,60)
+    row.Position = UDim2.new(0,10,0,y)
+    row.BackgroundColor3 = C.row
+    row.Parent = Frame
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0,8)
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0,120,1,0)
+    lbl.Text = text
+    lbl.TextColor3 = C.green
+    lbl.BackgroundTransparency = 1
+    lbl.Parent = row
+
+    return row
+end
+
+-- =====================
+-- TOGGLE
+-- =====================
 local function makeToggle(parent, default, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0,80,0,30)
-    btn.Position = UDim2.new(1,-90,0.5,-15)
-    btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
-    btn.Text = default and "ON" or "OFF"
+    btn.Size = UDim2.new(0,70,0,30)
+    btn.Position = UDim2.new(1,-80,0.5,-15)
+    btn.BackgroundColor3 = C.dark
+    btn.Text = "OFF"
     btn.Parent = parent
 
     local state = default
@@ -76,59 +165,39 @@ local function makeToggle(parent, default, callback)
     btn.MouseButton1Click:Connect(function()
         state = not state
         btn.Text = state and "ON" or "OFF"
-        btn.BackgroundColor3 = state and Color3.fromRGB(0,255,100) or Color3.fromRGB(60,60,60)
+        btn.BackgroundColor3 = state and C.green or C.dark
         callback(state)
     end)
 end
 
--- ======================
--- SLIDER FIX
--- ======================
-local function makeSlider(parent, value, callback)
+-- =====================
+-- INPUT BOX (FIXED)
+-- =====================
+local function makeInput(parent, value, callback)
     local box = Instance.new("TextBox")
     box.Size = UDim2.new(0,60,0,30)
-    box.Position = UDim2.new(0,150,0.5,-15)
+    box.Position = UDim2.new(0,140,0.5,-15)
     box.Text = tostring(value)
     box.ClearTextOnFocus = true
+    box.TextColor3 = C.green
+    box.BackgroundColor3 = C.bg
     box.Parent = parent
+
+    Instance.new("UICorner", box)
 
     box.FocusLost:Connect(function()
         local v = tonumber(box.Text)
-        if v then
-            callback(v)
-        end
+        if v then callback(v) end
         box.Text = tostring(value)
     end)
 end
 
--- ======================
--- ROW MAKER
--- ======================
-local function makeRow(y, text)
-    local row = Instance.new("Frame")
-    row.Size = UDim2.new(1,-20,0,60)
-    row.Position = UDim2.new(0,10,0,y)
-    row.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    row.Parent = Frame
-
-    Instance.new("UICorner", row).CornerRadius = UDim.new(0,8)
-
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(0,120,1,0)
-    lbl.Text = text
-    lbl.BackgroundTransparency = 1
-    lbl.TextColor3 = Color3.fromRGB(0,255,120)
-    lbl.Parent = row
-
-    return row
-end
-
--- ======================
+-- =====================
 -- FLY
--- ======================
-local rowFly = makeRow(20,"FLY")
+-- =====================
+local rowFly = createRow(20,"FLY")
 
-makeSlider(rowFly, flySpeed, function(v)
+makeInput(rowFly, flySpeed, function(v)
     flySpeed = v
 end)
 
@@ -163,12 +232,12 @@ makeToggle(rowFly, false, function(s)
     end
 end)
 
--- ======================
+-- =====================
 -- SPEED
--- ======================
-local rowSpeed = makeRow(100,"SPEED")
+-- =====================
+local rowSpeed = createRow(100,"SPEED")
 
-makeSlider(rowSpeed, walkSpeed, function(v)
+makeInput(rowSpeed, walkSpeed, function(v)
     walkSpeed = v
     if speedEnabled then humanoid.WalkSpeed = v end
 end)
@@ -178,12 +247,12 @@ makeToggle(rowSpeed, false, function(s)
     humanoid.WalkSpeed = s and walkSpeed or 16
 end)
 
--- ======================
+-- =====================
 -- JUMP
--- ======================
-local rowJump = makeRow(180,"JUMP")
+-- =====================
+local rowJump = createRow(180,"JUMP")
 
-makeSlider(rowJump, jumpPower, function(v)
+makeInput(rowJump, jumpPower, function(v)
     jumpPower = v
     if jumpEnabled then humanoid.JumpPower = v end
 end)
@@ -193,10 +262,10 @@ makeToggle(rowJump, false, function(s)
     humanoid.JumpPower = s and jumpPower or 50
 end)
 
--- ======================
+-- =====================
 -- NOCLIP
--- ======================
-local rowNoclip = makeRow(260,"NOCLIP")
+-- =====================
+local rowNoclip = createRow(260,"NOCLIP")
 
 makeToggle(rowNoclip, false, function(s)
     noclipEnabled = s
@@ -214,28 +283,9 @@ makeToggle(rowNoclip, false, function(s)
     end
 end)
 
--- ======================
--- MINIMIZE SYSTEM FIX
--- ======================
-local minimize = Instance.new("TextButton")
-minimize.Size = UDim2.new(0,30,0,30)
-minimize.Position = UDim2.new(1,-35,0,5)
-minimize.Text = "-"
-minimize.Parent = Frame
-
-minimize.MouseButton1Click:Connect(function()
-    Frame.Visible = false
-    LogoBtn.Visible = true
-end)
-
-LogoBtn.MouseButton1Click:Connect(function()
-    LogoBtn.Visible = false
-    Frame.Visible = true
-end)
-
--- ======================
--- CHARACTER RESPAWN FIX
--- ======================
+-- =====================
+-- RESPAWN FIX
+-- =====================
 player.CharacterAdded:Connect(function()
     humanoid = getHumanoid()
 
