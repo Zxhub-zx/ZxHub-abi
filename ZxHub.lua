@@ -629,4 +629,17 @@ tpMainBtn.BackgroundTransparency = 1
 tpMainBtn.Text = ""
 tpMainBtn.MouseButton1Click:Connect(function()
     tpList.Visible = not tpList.Visible
-    if tpList.Visible then updateT
+    if tpList.Visible then updateTPList() end
+end)
+
+-- ================= RESPAWN =================
+player.CharacterAdded:Connect(function()
+	task.wait(1)
+	humanoid = getHumanoid()
+	if speedEnabled then humanoid.WalkSpeed = walkSpeed end
+	if jumpEnabled then humanoid.JumpPower = jumpPower end
+	if noclipEnabled then startNoclip() end
+	if flyEnabled then startFly() end
+	if espEnabled then stopESP() startESP() end
+    if freecamEnabled then stopFreecam() startFreecam() end
+end)
