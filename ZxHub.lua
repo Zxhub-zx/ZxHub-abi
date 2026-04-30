@@ -7,29 +7,16 @@ repeat task.wait() until player:FindFirstChild("PlayerGui")
 
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local camera = workspace.CurrentCamera
 
 local flyEnabled = false
 local speedEnabled = false
 local jumpEnabled = false
 local noclipEnabled = false
 local espEnabled = false
-local aimbotEnabled = false -- ระบบใหม่
-local holdingAim = false -- เช็คการคลิกขวา
 
 local flySpeed = 8
 local walkSpeed = 16
 local jumpPower = 50
-local aimbotSmoothness = 0.1 -- ค่าความลื่น (0.1 = ลื่นมาก)
-local fovRadius = 150 -- ขนาดวงกลม
-
--- ระบบวงกลม FOV (ล็อคกลางจอถาวร)
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Thickness = 1.5
-FOVCircle.Color = Color3.fromRGB(0, 255, 120)
-FOVCircle.Transparency = 0.7
-FOVCircle.Filled = false
-FOVCircle.Visible = false
 
 local up = false
 local down = false
@@ -44,86 +31,6 @@ end
 
 local humanoid = getHumanoid()
 
--- เช็คการกดคลิกขวา
-UIS.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        holdingAim = true
-    end
-end)
-UIS.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        holdingAim = false
-    end
-end)
-
--- ================= NEW LOGIC: VISIBILITY CHECK =================
-local function isVisible(part)
-    local char = player.Character
-    if not char then return false end
-    
-    -- สร้าง Ray เพื่อเช็คว่ามีอะไรขวางระหว่างกล้องกับเป้าหมายไหม
-    local ray = Ray.new(camera.CFrame.Position, (part.Position - camera.CFrame.Position).Unit * 1000)
-    local hit, pos = workspace:FindPartOnRayWithIgnoreList(ray, {char, camera})
-    
-    if hit and hit:IsDescendantOf(part.Parent) then
-        return true
-    end
-    return false
-end
-
--- ================= AIMBOT LOGIC (CENTERED + HITBOX CHECK) =================
-local function getClosestPlayerToCenter()
-    local target = nil
-    local shortestDistance = fovRadius
-    local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-
-    for _, p in ipairs(game.Players:GetPlayers()) do
-        if p ~= player and p.Character then
-            -- ระบบเช็คทีม
-            if p.Team == player.Team then continue end
-            
-            -- เลือก Hitbox ที่จะล็อค (จัดลำดับความสำคัญ: หัว > ตัว)
-            local targetHitbox = p.Character:FindFirstChild("Head") or p.Character:FindFirstChild("HumanoidRootPart")
-            local hum = p.Character:FindFirstChildOfClass("Humanoid")
-            
-            if targetHitbox and hum and hum.Health > 0 then
-                local pos, onScreen = camera:WorldToViewportPoint(targetHitbox.Position)
-                
-                if onScreen then
-                    local distance = (Vector2.new(pos.X, pos.Y) - screenCenter).Magnitude
-                    
-                    -- ตรวจสอบว่าอยู่ในวงกลม และ มองเห็นตัวจริงๆ (ไม่โดนกำแพงบัง)
-                    if distance < shortestDistance and isVisible(targetHitbox) then
-                        shortestDistance = distance
-                        target = targetHitbox
-                    end
-                end
-            end
-        end
-    end
-    return target
-end
-
-RunService.RenderStepped:Connect(function()
-    -- ล็อควงกลมไว้กลางจอตลอดเวลา
-    local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-    FOVCircle.Position = center
-    FOVCircle.Radius = fovRadius
-    FOVCircle.Visible = aimbotEnabled
-
-    -- ล็อคเป้าเมื่อเปิดปุ่ม และ คลิกขวาค้าง
-    if aimbotEnabled and holdingAim then
-        local targetPart = getClosestPlayerToCenter()
-        if targetPart then
-            -- คำนวณตำแหน่งที่จะหันไป (เป้าหมาย)
-            local lookAt = CFrame.new(camera.CFrame.Position, targetPart.Position)
-            -- ใช้ Lerp เพื่อให้การล็อคดูลื่นและไม่กระตุกจนหันจอไม่ได้
-            camera.CFrame = camera.CFrame:Lerp(lookAt, aimbotSmoothness)
-        end
-    end
-end)
-
--- ================= GUI SETUP =================
 pcall(function()
 	if player.PlayerGui:FindFirstChild("ZxHubGUI") then
 		player.PlayerGui.ZxHubGUI:Destroy()
@@ -470,7 +377,7 @@ local function createRow(parent, name, yPos, getVal, setVal, toggle, noSlider)
 	Instance.new("UICorner", row).CornerRadius = UDim.new(0,8)
 
 	local label = Instance.new("TextLabel", row)
-	label.Size = UDim2.new(0,150,1,0)
+	label.Size = UDim2.new(0,120,1,0)
 	label.Position = UDim2.new(0,10,0,0)
 	label.BackgroundTransparency = 1
 	label.Text = name
@@ -588,13 +495,6 @@ createRow(page2, "ESP", 5,
 		if s then startESP() else stopESP() end
 	end,
 	true
-)
-
--- ปุ่ม AIMBOT (ล็อคหัว + เช็คทีม + วงกลมกลางจอ รวมในนี้หมดแล้ว)
-createRow(page2, "AIMBOT (R-Click)", 65,
-	function() return aimbotSmoothness * 1000 end,
-	function(v) aimbotSmoothness = v / 1000 end,
-	function(s) aimbotEnabled = s end
 )
 
 -- ================= RESPAWN =================
