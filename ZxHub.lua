@@ -1,149 +1,645 @@
+if not game:IsLoaded() then
+	game.Loaded:Wait()
+end
+
 local player = game.Players.LocalPlayer
-local UIS, RunService = game:GetService("UserInputService"), game:GetService("RunService")
-local function getChar() return player.Character or player.CharacterAdded:Wait() end
-local function getHum() return getChar():WaitForChild("Humanoid") end
+repeat task.wait() until player:FindFirstChild("PlayerGui")
 
-local flyEnabled, speedEnabled, jumpEnabled, noclipEnabled, espEnabled, freecamEnabled = false, false, false, false, false, false
-local flySpeed, walkSpeed, jumpPower, freecamSpeed = 8, 16, 50, 2
-local moveKeys = {fwd = false, bwd = false, lft = false, rgt = false, up = false, down = false}
-local flyConn, noclipConn, espObjects, freecamConn, freecamPart = nil, nil, {}
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
--- GUI Setup
-pcall(function() if player.PlayerGui:FindFirstChild("ZxHubGUI") then player.PlayerGui.ZxHubGUI:Destroy() end end)
-local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "ZxHubGUI"; gui.ResetOnSpawn = false; gui.IgnoreGuiInset = true
+local flyEnabled = false
+local speedEnabled = false
+local jumpEnabled = false
+local noclipEnabled = false
+local espEnabled = false
+local freecamEnabled = false -- เพิ่มตัวแปร Freecam
+
+local flySpeed = 8
+local walkSpeed = 16
+local jumpPower = 50
+local freecamSpeed = 2 -- ความเร็วกล้อง Freecam
+
+local up = false
+local down = false
+
+local function getChar()
+	return player.Character or player.CharacterAdded:Wait()
+end
+
+local function getHumanoid()
+	return getChar():WaitForChild("Humanoid")
+end
+
+local humanoid = getHumanoid()
+
+pcall(function()
+	if player.PlayerGui:FindFirstChild("ZxHubGUI") then
+		player.PlayerGui.ZxHubGUI:Destroy()
+	end
+end)
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "ZxHubGUI"
+gui.Parent = player:WaitForChild("PlayerGui")
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 520, 0, 360); frame.Position = UDim2.new(0.5,-260,0.5,-180); frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+frame.Size = UDim2.new(0, 520, 0, 360)
+frame.Position = UDim2.new(0.5,-260,0.5,-180)
+frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+frame.Active = true
+frame.Visible = true
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0,14)
-Instance.new("UIStroke", frame).Color = Color3.fromRGB(0,255,120)
+
+local glow = Instance.new("UIStroke", frame)
+glow.Color = Color3.fromRGB(0,255,120)
+glow.Thickness = 2
 
 local topBar = Instance.new("Frame", frame)
-topBar.Size = UDim2.new(1,0,0,40); topBar.BackgroundColor3 = Color3.fromRGB(30,30,30); topBar.BackgroundTransparency = 0.5
+topBar.Size = UDim2.new(1,0,0,40)
+topBar.BackgroundColor3 = Color3.fromRGB(30,30,30) -- ทำให้มองเห็นพื้นที่ลาก
+topBar.BackgroundTransparency = 0.5
 Instance.new("UICorner", topBar).CornerRadius = UDim.new(0,14)
 
-local function createText(p, txt, sz, pos, align)
-	local l = Instance.new("TextLabel", p); l.Size = sz; l.Position = pos; l.BackgroundTransparency = 1
-	l.Text = txt; l.TextColor3 = Color3.fromRGB(0,255,120); l.Font = "GothamBold"; l.TextSize = 14; l.TextXAlignment = align; return l
-end
-createText(topBar, "ZxHub", UDim2.new(1,0,1,0), UDim2.new(0,0,0,0), "Center").TextSize = 22
-createText(topBar, "by : YouTube ZXzn9", UDim2.new(0,200,1,0), UDim2.new(0,10,0,0), "Left")
+local title = Instance.new("TextLabel", topBar)
+title.Size = UDim2.new(1,0,1,0)
+title.BackgroundTransparency = 1
+title.Text = "ZxHub"
+title.TextColor3 = Color3.fromRGB(0,255,120)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 22
+title.TextXAlignment = Enum.TextXAlignment.Center
 
--- Dragging & Minimize
-local function dragify(t, h)
-	local drag, start, pos
-	h.InputBegan:Connect(function(i) if i.UserInputType.Name:find("Mouse") or i.UserInputType.Name:find("Touch") then drag = true; start = i.Position; pos = t.Position end end)
-	UIS.InputChanged:Connect(function(i) if drag then local d = i.Position - start; t.Position = UDim2.new(pos.X.Scale, pos.X.Offset+d.X, pos.Y.Scale, pos.Y.Offset+d.Y) end end)
-	UIS.InputEnded:Connect(function() drag = false end)
-end
-dragify(frame, topBar)
-
-local logo = Instance.new("TextButton", gui)
-logo.Size = UDim2.new(0,70,0,70); logo.Position = UDim2.new(0,20,0.5,-35); logo.Visible = false; logo.Text = "ZX"; logo.BackgroundColor3 = Color3.fromRGB(15,15,15); logo.TextColor3 = Color3.fromRGB(0,255,120); logo.Font = "GothamBold"
-Instance.new("UICorner", logo).CornerRadius = UDim.new(1,0); dragify(logo, logo)
+local credit = Instance.new("TextLabel", topBar)
+credit.Size = UDim2.new(0, 200, 1, 0)
+credit.Position = UDim2.new(0, 10, 0, 0)
+credit.BackgroundTransparency = 1
+credit.Text = "by : YouTube ZXzn9"
+credit.TextColor3 = Color3.fromRGB(0,255,120)
+credit.Font = Enum.Font.GothamBold
+credit.TextSize = 14
+credit.TextXAlignment = Enum.TextXAlignment.Left
 
 local minBtn = Instance.new("TextButton", frame)
-minBtn.Size = UDim2.new(0,30,0,30); minBtn.Position = UDim2.new(1,-35,0,5); minBtn.Text = "-"; minBtn.BackgroundColor3 = Color3.fromRGB(60,60,60); minBtn.TextColor3 = Color3.new(1,1,1)
-minBtn.MouseButton1Click:Connect(function() frame.Visible = false; logo.Visible = true end)
-logo.MouseButton1Click:Connect(function() frame.Visible = true; logo.Visible = false end)
+minBtn.Size = UDim2.new(0,30,0,30)
+minBtn.Position = UDim2.new(1,-35,0,5)
+minBtn.Text = "-"
+minBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+minBtn.TextColor3 = Color3.fromRGB(255,255,255)
+Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0,6)
 
--- Controls Buttons (WASD Up Down)
-local controls = {}
-local btnData = {W = "fwd", S = "bwd", A = "lft", D = "rgt", ["↑"] = "up", ["↓"] = "down"}
-local btnPos = {W = UDim2.new(1,-145,0.7,0), S = UDim2.new(1,-145,0.8,0), A = UDim2.new(1,-210,0.8,0), D = UDim2.new(1,-80,0.8,0), ["↑"] = UDim2.new(1,-80,0.7,0), ["↓"] = UDim2.new(1,-80,0.8,0)}
+-- ================= TAB BUTTONS =================
+local tab1Btn = Instance.new("TextButton", frame)
+tab1Btn.Size = UDim2.new(0,100,0,28)
+tab1Btn.Position = UDim2.new(0,10,0,42)
+tab1Btn.Text = "หน้า 1"
+tab1Btn.Font = Enum.Font.GothamBold
+tab1Btn.TextSize = 13
+tab1Btn.TextColor3 = Color3.fromRGB(0,0,0)
+tab1Btn.BackgroundColor3 = Color3.fromRGB(0,255,120)
+Instance.new("UICorner", tab1Btn).CornerRadius = UDim.new(0,6)
 
-for txt, key in pairs(btnData) do
-	local b = Instance.new("TextButton", gui); b.Size = UDim2.new(0,60,0,60); b.Position = btnPos[txt]; b.Text = txt; b.Visible = false; b.BackgroundColor3 = Color3.fromRGB(40,40,40); b.TextColor3 = Color3.fromRGB(0,255,120); b.Font = "GothamBold"; b.TextSize = 24
-	Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
-	b.InputBegan:Connect(function(i) if i.UserInputType.Name:find("Mouse") or i.UserInputType.Name:find("Touch") then moveKeys[key] = true end end)
-	b.InputEnded:Connect(function(i) if i.UserInputType.Name:find("Mouse") or i.UserInputType.Name:find("Touch") then moveKeys[key] = false end end)
-	controls[key] = b
+local tab2Btn = Instance.new("TextButton", frame)
+tab2Btn.Size = UDim2.new(0,100,0,28)
+tab2Btn.Position = UDim2.new(0,120,0,42)
+tab2Btn.Text = "หน้า 2"
+tab2Btn.Font = Enum.Font.GothamBold
+tab2Btn.TextSize = 13
+tab2Btn.TextColor3 = Color3.fromRGB(255,255,255)
+tab2Btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+Instance.new("UICorner", tab2Btn).CornerRadius = UDim.new(0,6)
+
+-- ================= PAGE CONTAINERS (SCROLLING) =================
+-- เปลี่ยนจาก Frame เป็น ScrollingFrame ตามสั่ง
+local page1 = Instance.new("ScrollingFrame", frame)
+page1.Size = UDim2.new(1,0,1,-80)
+page1.Position = UDim2.new(0,0,0,78)
+page1.BackgroundTransparency = 1
+page1.Visible = true
+page1.ScrollBarThickness = 3
+page1.CanvasSize = UDim2.new(0,0,0,450) -- เลื่อนขึ้นลงได้
+
+local page2 = Instance.new("ScrollingFrame", frame)
+page2.Size = UDim2.new(1,0,1,-80)
+page2.Position = UDim2.new(0,0,0,78)
+page2.BackgroundTransparency = 1
+page2.Visible = false
+page2.ScrollBarThickness = 3
+page2.CanvasSize = UDim2.new(0,0,0,600) -- เผื่อพื้นที่ให้รายชื่อ Teleport
+
+local function switchTab(pg)
+	if pg == 1 then
+		page1.Visible = true
+		page2.Visible = false
+		tab1Btn.BackgroundColor3 = Color3.fromRGB(0,255,120)
+		tab1Btn.TextColor3 = Color3.fromRGB(0,0,0)
+		tab2Btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+		tab2Btn.TextColor3 = Color3.fromRGB(255,255,255)
+	else
+		page1.Visible = false
+		page2.Visible = true
+		tab2Btn.BackgroundColor3 = Color3.fromRGB(0,255,120)
+		tab2Btn.TextColor3 = Color3.fromRGB(0,0,0)
+		tab1Btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+		tab1Btn.TextColor3 = Color3.fromRGB(255,255,255)
+	end
 end
 
--- System Functions
-local function toggleControls(v) for _, b in pairs(controls) do b.Visible = v end end
+tab1Btn.MouseButton1Click:Connect(function() switchTab(1) end)
+tab2Btn.MouseButton1Click:Connect(function() switchTab(2) end)
 
-local function startFly()
-	local c = getChar(); local r = c:WaitForChild("HumanoidRootPart"); getHum().PlatformStand = true
-	local bg = Instance.new("BodyGyro", r); bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
-	local bv = Instance.new("BodyVelocity", r); bv.MaxForce = Vector3.new(1e5,1e5,1e5)
-	toggleControls(true); controls.lft.Visible, controls.rgt.Visible, controls.fwd.Visible, controls.bwd.Visible = false, false, false, false
-	flyConn = RunService.Heartbeat:Connect(function()
-		local cam = workspace.CurrentCamera; local dir = Vector3.zero
-		local md = getHum().MoveDirection
-		if md.Magnitude > 0.1 then dir += Vector3.new(md.X, 0, md.Z) end
-		if UIS:IsKeyDown("W") then dir += cam.CFrame.LookVector end
-		if UIS:IsKeyDown("S") then dir -= cam.CFrame.LookVector end
-		if moveKeys.up then dir += Vector3.new(0,1,0) end
-		if moveKeys.down then dir -= Vector3.new(0,1,0) end
-		bv.Velocity = dir * flySpeed; bg.CFrame = cam.CFrame
+-- ================= LOGO / DRAG (FIXED) =================
+local logo = Instance.new("TextButton", gui)
+logo.Size = UDim2.new(0,70,0,70)
+logo.Position = UDim2.new(0,20,0.5,-35)
+logo.Text = "ZX"
+logo.Visible = false
+logo.BackgroundColor3 = Color3.fromRGB(15,15,15)
+logo.TextColor3 = Color3.fromRGB(0,255,120)
+logo.Font = Enum.Font.GothamBold
+logo.TextSize = 18
+Instance.new("UICorner", logo).CornerRadius = UDim.new(1,0)
+
+local stroke = Instance.new("UIStroke", logo)
+stroke.Color = Color3.fromRGB(0,255,120)
+stroke.Thickness = 2
+
+local upBtn = Instance.new("TextButton", gui)
+upBtn.Size = UDim2.new(0,60,0,60)
+upBtn.Position = UDim2.new(1,-80,0.7,0)
+upBtn.Text = "↑"
+upBtn.Visible = false
+upBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+upBtn.TextColor3 = Color3.fromRGB(0,255,120)
+upBtn.Font = Enum.Font.GothamBold
+upBtn.TextSize = 24
+Instance.new("UICorner", upBtn).CornerRadius = UDim.new(0,10)
+
+local downBtn = Instance.new("TextButton", gui)
+downBtn.Size = UDim2.new(0,60,0,60)
+downBtn.Position = UDim2.new(1,-80,0.8,0)
+downBtn.Text = "↓"
+downBtn.Visible = false
+downBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+downBtn.TextColor3 = Color3.fromRGB(0,255,120)
+downBtn.Font = Enum.Font.GothamBold
+downBtn.TextSize = 24
+Instance.new("UICorner", downBtn).CornerRadius = UDim.new(0,10)
+
+upBtn.InputBegan:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then up = true end
+end)
+upBtn.InputEnded:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then up = false end
+end)
+downBtn.InputBegan:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then down = true end
+end)
+downBtn.InputEnded:Connect(function(i)
+	if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then down = false end
+end)
+
+-- แก้ไขระบบ Drag ให้เสถียรขึ้น (ลากได้เฉพาะที่แถบบน)
+local function dragify(target, handle)
+	local drag = false
+	local start, pos
+	handle.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			drag = true
+			start = i.Position
+			pos = target.Position
+		end
 	end)
+	UIS.InputChanged:Connect(function(i)
+		if drag then
+			local d = i.Position - start
+			target.Position = UDim2.new(pos.X.Scale, pos.X.Offset+d.X, pos.Y.Scale, pos.Y.Offset+d.Y)
+		end
+	end)
+	UIS.InputEnded:Connect(function() drag = false end)
 end
 
-local function stopFly() if flyConn then flyConn:Disconnect() end; pcall(function() getChar().HumanoidRootPart.BodyGyro:Destroy(); getChar().HumanoidRootPart.BodyVelocity:Destroy(); getHum().PlatformStand = false end); toggleControls(false) end
+dragify(frame, topBar) -- ลากได้ที่แถบบนเท่านั้น
+dragify(logo, logo)
 
-local function startNoclip() noclipConn = RunService.Stepped:Connect(function() for _, v in pairs(getChar():GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end end) end
+minBtn.MouseButton1Click:Connect(function()
+	frame.Visible = false
+	logo.Visible = true
+end)
+logo.MouseButton1Click:Connect(function()
+	frame.Visible = true
+	logo.Visible = false
+end)
 
-local function addESP(p)
-	if p == player or not p.Character then return end
-	local hl = Instance.new("SelectionBox", gui); hl.Adornee = p.Character; hl.Color3 = Color3.new(1,1,1); hl.SurfaceTransparency = 0.7
-	local bb = Instance.new("BillboardGui", gui); bb.Adornee = p.Character:FindFirstChild("HumanoidRootPart"); bb.Size = UDim2.new(0,100,0,30); bb.AlwaysOnTop = true; bb.StudsOffset = Vector3.new(0,3,0)
-	local n = createText(bb, p.Name, UDim2.new(1,0,1,0), UDim2.new(0,0,0,0), "Center"); n.TextColor3 = Color3.new(1,1,1)
-	espObjects[p] = {hl, bb}
-end
+-- ================= FREECAM (NEW) =================
+local freecamPart
+local freecamConn
 
 local function startFreecam()
-	local cam = workspace.CurrentCamera; getChar().HumanoidRootPart.Anchored = true
-	freecamPart = Instance.new("Part", workspace); freecamPart.Size = Vector3.new(1,1,1); freecamPart.Transparency = 1; freecamPart.Anchored = true; freecamPart.CFrame = cam.CFrame
-	cam.CameraSubject = freecamPart; toggleControls(true)
-	freecamConn = RunService.RenderStepped:Connect(function()
-		local dir = Vector3.zero; local cf = cam.CFrame
-		if moveKeys.fwd or UIS:IsKeyDown("W") then dir += cf.LookVector end
-		if moveKeys.bwd or UIS:IsKeyDown("S") then dir -= cf.LookVector end
-		if moveKeys.lft or UIS:IsKeyDown("A") then dir -= cf.RightVector end
-		if moveKeys.rgt or UIS:IsKeyDown("D") then dir += cf.RightVector end
-		if moveKeys.up then dir += Vector3.new(0,1,0) end
-		if moveKeys.down then dir -= Vector3.new(0,1,0) end
-		if dir.Magnitude > 0 then freecamPart.CFrame += dir.Unit * freecamSpeed end
+    local char = getChar()
+    local root = char:WaitForChild("HumanoidRootPart")
+    local cam = workspace.CurrentCamera
+    
+    root.Anchored = true -- ล็อคตัวละคร
+    
+    freecamPart = Instance.new("Part")
+    freecamPart.Size = Vector3.new(1,1,1)
+    freecamPart.Transparency = 1
+    freecamPart.CanCollide = false
+    freecamPart.Anchored = true
+    freecamPart.CFrame = cam.CFrame
+    freecamPart.Parent = workspace
+    
+    cam.CameraSubject = freecamPart
+    upBtn.Visible = true
+    downBtn.Visible = true
+    
+    freecamConn = RunService.RenderStepped:Connect(function()
+        local moveDir = Vector3.new(0,0,0)
+        local cf = cam.CFrame
+        
+        -- ควบคุมทิศทางกล้อง
+        if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir += cf.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir -= cf.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir -= cf.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir += cf.RightVector end
+        
+        -- ควบคุมขึ้นลง (ใช้ปุ่มเดิม)
+        if up then moveDir += Vector3.new(0,1,0) end
+        if down then moveDir -= Vector3.new(0,1,0) end
+        
+        if moveDir.Magnitude > 0 then
+            freecamPart.CFrame = freecamPart.CFrame + (moveDir.Unit * freecamSpeed)
+        end
+    end)
+end
+
+local function stopFreecam()
+    if freecamConn then freecamConn:Disconnect() freecamConn = nil end
+    if freecamPart then freecamPart:Destroy() freecamPart = nil end
+    local char = getChar()
+    char:WaitForChild("HumanoidRootPart").Anchored = false
+    workspace.CurrentCamera.CameraSubject = char:WaitForChild("Humanoid")
+    upBtn.Visible = false
+    downBtn.Visible = false
+end
+
+-- ================= FLY =================
+local flyConn
+local flyBV, flyBG
+
+local function startFly()
+	local char = getChar()
+	local root = char:WaitForChild("HumanoidRootPart")
+	local hum = char:WaitForChild("Humanoid")
+	hum.PlatformStand = true
+
+	flyBG = Instance.new("BodyGyro", root)
+	flyBG.MaxTorque = Vector3.new(1e5,1e5,1e5)
+	flyBG.D = 50
+
+	flyBV = Instance.new("BodyVelocity", root)
+	flyBV.MaxForce = Vector3.new(1e5,1e5,1e5)
+	flyBV.Velocity = Vector3.zero
+
+	upBtn.Visible = true
+	downBtn.Visible = true
+
+	flyConn = RunService.Heartbeat:Connect(function()
+		local cam = workspace.CurrentCamera
+		local dir = Vector3.zero
+		local hum2 = char:FindFirstChildOfClass("Humanoid")
+		if hum2 then
+			local md = hum2.MoveDirection
+			if md.Magnitude > 0.1 then
+				dir += Vector3.new(md.X, 0, md.Z)
+			end
+		end
+		if UIS:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
+		if up then dir += Vector3.new(0,1,0) end
+		if down then dir -= Vector3.new(0,1,0) end
+		if dir.Magnitude > 1 then dir = dir.Unit end
+		flyBV.Velocity = dir * flySpeed
+		flyBG.CFrame = cam.CFrame
 	end)
 end
 
--- Tab Logic
-local page1 = Instance.new("ScrollingFrame", frame); page1.Size = UDim2.new(1,0,1,-80); page1.Position = UDim2.new(0,0,0,78); page1.BackgroundTransparency = 1; page1.CanvasSize = UDim2.new(0,0,0,450)
-local page2 = page1:Clone(); page2.Parent = frame; page2.Visible = false; page2.CanvasSize = UDim2.new(0,0,0,600)
-
-local function createRow(p, name, y, getV, setV, toggle, noSlider)
-	local r = Instance.new("Frame", p); r.Size = UDim2.new(1,-20,0,50); r.Position = UDim2.new(0,10,0,y); r.BackgroundColor3 = Color3.fromRGB(30,30,30)
-	Instance.new("UICorner", r)
-	local l = createText(r, name, UDim2.new(0,120,1,0), UDim2.new(0,10,0,0), "Left"); l.TextColor3 = Color3.new(1,1,1)
-	local tb = Instance.new("TextButton", r); tb.Size = UDim2.new(0,54,0,28); tb.Position = UDim2.new(1,-64,0.5,-14); tb.Text = "OFF"; tb.BackgroundColor3 = Color3.fromRGB(80,80,80)
-	Instance.new("UICorner", tb)
-	local on = false; tb.MouseButton1Click:Connect(function() on = not on; tb.Text = on and "ON" or "OFF"; tb.BackgroundColor3 = on and Color3.fromRGB(0,200,80) or Color3.fromRGB(80,80,80); toggle(on) end)
+local function stopFly()
+	if flyConn then flyConn:Disconnect() flyConn = nil end
+	if flyBV then flyBV:Destroy() flyBV = nil end
+	if flyBG then flyBG:Destroy() flyBG = nil end
+	upBtn.Visible = false
+	downBtn.Visible = false
+	pcall(function() getChar():WaitForChild("Humanoid").PlatformStand = false end)
 end
 
--- Pages Content
-createRow(page1, "FLY", 5, function() return flySpeed end, function(v) flySpeed = v end, function(s) flyEnabled = s; if s then startFly() else stopFly() end end)
-createRow(page1, "SPEED", 65, function() return walkSpeed end, function(v) walkSpeed = v end, function(s) speedEnabled = s; getHum().WalkSpeed = s and walkSpeed or 16 end)
-createRow(page1, "JUMP", 125, function() return jumpPower end, function(v) jumpPower = v end, function(s) jumpEnabled = s; getHum().JumpPower = s and jumpPower or 50 end)
-createRow(page1, "NOCLIP", 185, nil, nil, function(s) noclipEnabled = s; if s then startNoclip() else if noclipConn then noclipConn:Disconnect() end end end, true)
-createRow(page2, "ESP", 5, nil, nil, function(s) espEnabled = s; if s then for _,p in pairs(game.Players:GetPlayers()) do addESP(p) end else for _,v in pairs(espObjects) do v[1]:Destroy(); v[2]:Destroy() end espObjects = {} end end, true)
-createRow(page2, "FREECAM", 65, function() return freecamSpeed end, function(v) freecamSpeed = v end, function(s) freecamEnabled = s; if s then startFreecam() else if freecamConn then freecamConn:Disconnect() end; workspace.CurrentCamera.CameraSubject = getHum(); getChar().HumanoidRootPart.Anchored = false; toggleControls(false); freecamPart:Destroy() end end)
+-- ================= NOCLIP =================
+local noclipConn
 
--- Tab Switch
-local function tabBtn(txt, x, p)
-	local b = Instance.new("TextButton", frame); b.Size = UDim2.new(0,100,0,28); b.Position = UDim2.new(0,x,0,42); b.Text = txt; b.BackgroundColor3 = Color3.fromRGB(60,60,60)
-	Instance.new("UICorner", b); b.MouseButton1Click:Connect(function() page1.Visible = (p==1); page2.Visible = (p==2) end); return b
+local function startNoclip()
+	noclipConn = RunService.Stepped:Connect(function()
+		local char = player.Character
+		if not char then return end
+		for _, part in ipairs(char:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = false
+			end
+		end
+	end)
 end
-tabBtn("หน้า 1", 10, 1); tabBtn("หน้า 2", 120, 2)
 
--- TP System (Simplified)
-local tpR = Instance.new("Frame", page2); tpR.Size = UDim2.new(1,-20,0,50); tpR.Position = UDim2.new(0,10,0,125); tpR.BackgroundColor3 = Color3.fromRGB(30,30,30)
-local tpl = createText(tpR, "TELEPORT (Click)", UDim2.new(1,0,1,0), UDim2.new(0,0,0,0), "Center")
-local tpBtn = Instance.new("TextButton", tpR); tpBtn.Size = UDim2.new(1,0,1,0); tpBtn.BackgroundTransparency = 1; tpBtn.Text = ""
-tpBtn.MouseButton1Click:Connect(function() for _,p in pairs(game.Players:GetPlayers()) do if p ~= player and p.Character then getChar():SetPrimaryPartCFrame(p.Character.HumanoidRootPart.CFrame) break end end end)
+local function stopNoclip()
+	if noclipConn then noclipConn:Disconnect() noclipConn = nil end
+	local char = player.Character
+	if char then
+		for _, part in ipairs(char:GetDescendants()) do
+			if part:IsA("BasePart") then part.CanCollide = true end
+		end
+	end
+end
 
--- Auto Update
-player.CharacterAdded:Connect(function() 
-	task.wait(1); if speedEnabled then getHum().WalkSpeed = walkSpeed end
-	if flyEnabled then startFly() end; if noclipEnabled then startNoclip() end 
+-- ================= ESP =================
+local espObjects = {}
+
+local function addESP(target)
+	if target == player then return end
+	local char = target.Character
+	if not char then return end
+	local root = char:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+
+	local hl = Instance.new("SelectionBox")
+	hl.Adornee = char
+	hl.Color3 = Color3.fromRGB(255,255,255)
+	hl.LineThickness = 0.05
+	hl.SurfaceTransparency = 0.7
+	hl.SurfaceColor3 = Color3.fromRGB(255,255,255)
+	hl.Parent = gui
+
+	local bb = Instance.new("BillboardGui")
+	bb.Adornee = root
+	bb.Size = UDim2.new(0,100,0,30)
+	bb.StudsOffset = Vector3.new(0,3,0)
+	bb.AlwaysOnTop = true
+	bb.Parent = gui
+
+	local nameLabel = Instance.new("TextLabel", bb)
+	nameLabel.Size = UDim2.new(1,0,1,0)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = target.Name
+	nameLabel.TextColor3 = Color3.fromRGB(255,255,255)
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.TextSize = 14
+	nameLabel.TextStrokeTransparency = 0
+
+	espObjects[target] = {hl, bb}
+end
+
+local function removeESP(target)
+	if espObjects[target] then
+		for _, obj in ipairs(espObjects[target]) do
+			obj:Destroy()
+		end
+		espObjects[target] = nil
+	end
+end
+
+local function startESP()
+	for _, p in ipairs(game.Players:GetPlayers()) do
+		addESP(p)
+	end
+	game.Players.PlayerAdded:Connect(function(p)
+		if espEnabled then
+			p.CharacterAdded:Connect(function()
+				task.wait(1)
+				addESP(p)
+			end)
+		end
+	end)
+end
+
+local function stopESP()
+	for _, p in ipairs(game.Players:GetPlayers()) do
+		removeESP(p)
+	end
+end
+
+-- ================= CREATE ROW =================
+local function createRow(parent, name, yPos, getVal, setVal, toggle, noSlider)
+	local row = Instance.new("Frame", parent)
+	row.Size = UDim2.new(1,-20,0,50)
+	row.Position = UDim2.new(0,10,0,yPos)
+	row.BackgroundColor3 = Color3.fromRGB(30,30,30)
+	row.BorderSizePixel = 0
+	Instance.new("UICorner", row).CornerRadius = UDim.new(0,8)
+
+	local label = Instance.new("TextLabel", row)
+	label.Size = UDim2.new(0,120,1,0)
+	label.Position = UDim2.new(0,10,0,0)
+	label.BackgroundTransparency = 1
+	label.Text = name
+	label.TextColor3 = Color3.fromRGB(255,255,255)
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 14
+	label.TextXAlignment = Enum.TextXAlignment.Left
+
+	local togBtn = Instance.new("TextButton", row)
+	togBtn.Size = UDim2.new(0,54,0,28)
+	togBtn.Position = UDim2.new(1,-64,0.5,-14)
+	togBtn.Text = "OFF"
+	togBtn.Font = Enum.Font.GothamBold
+	togBtn.TextSize = 12
+	togBtn.TextColor3 = Color3.fromRGB(255,255,255)
+	togBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
+	Instance.new("UICorner", togBtn).CornerRadius = UDim.new(0,6)
+
+	local on = false
+	togBtn.MouseButton1Click:Connect(function()
+		on = not on
+		togBtn.Text = on and "ON" or "OFF"
+		togBtn.BackgroundColor3 = on and Color3.fromRGB(0,200,80) or Color3.fromRGB(80,80,80)
+		toggle(on)
+	end)
+
+	if not noSlider then
+		local maxVal = 500
+		local sliderBg = Instance.new("Frame", row)
+		sliderBg.Size = UDim2.new(0,140,0,10)
+		sliderBg.Position = UDim2.new(0,130,0.5,-5)
+		sliderBg.BackgroundColor3 = Color3.fromRGB(60,60,60)
+		Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(1,0)
+
+		local fill = Instance.new("Frame", sliderBg)
+		fill.Size = UDim2.new(getVal()/maxVal, 0, 1, 0)
+		fill.BackgroundColor3 = Color3.fromRGB(0,255,120)
+		fill.BorderSizePixel = 0
+		Instance.new("UICorner", fill).CornerRadius = UDim.new(1,0)
+
+		local valBox = Instance.new("TextBox", row)
+		valBox.Size = UDim2.new(0,45,0,26)
+		valBox.Position = UDim2.new(0,275,0.5,-13)
+		valBox.BackgroundColor3 = Color3.fromRGB(45,45,45)
+		valBox.TextColor3 = Color3.fromRGB(0,255,120)
+		valBox.Font = Enum.Font.GothamBold
+		valBox.TextSize = 13
+		valBox.Text = tostring(getVal())
+		valBox.ClearTextOnFocus = true
+		Instance.new("UICorner", valBox).CornerRadius = UDim.new(0,4)
+
+		local function applyVal(v)
+			v = math.clamp(math.floor(v), 0, maxVal)
+			fill.Size = UDim2.new(v/maxVal, 0, 1, 0)
+			valBox.Text = tostring(v)
+			setVal(v)
+		end
+
+		valBox.FocusLost:Connect(function()
+			local num = tonumber(valBox.Text)
+			if num then applyVal(num) else valBox.Text = tostring(getVal()) end
+		end)
+
+		local dragging = false
+		local function updateSlider(input)
+			local rel = (input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X
+			rel = math.clamp(rel, 0, 1)
+			applyVal(math.floor(rel * maxVal))
+		end
+
+		sliderBg.InputBegan:Connect(function(i)
+			if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+				dragging = true
+				updateSlider(i)
+			end
+		end)
+		UIS.InputChanged:Connect(function(i) if dragging then updateSlider(i) end end)
+		UIS.InputEnded:Connect(function(i)
+			if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+				dragging = false
+			end
+		end)
+	end
+end
+
+-- ================= PAGE 1 ROWS =================
+createRow(page1, "FLY", 5,
+	function() return flySpeed end,
+	function(v) flySpeed = v end,
+	function(s) flyEnabled = s if s then startFly() else stopFly() end end
+)
+createRow(page1, "SPEED", 65,
+	function() return walkSpeed end,
+	function(v) walkSpeed = v if speedEnabled then humanoid.WalkSpeed = v end end,
+	function(s) speedEnabled = s humanoid.WalkSpeed = s and walkSpeed or 16 end
+)
+createRow(page1, "JUMP", 125,
+	function() return jumpPower end,
+	function(v) jumpPower = v if jumpEnabled then humanoid.JumpPower = v end end,
+	function(s) jumpEnabled = s humanoid.JumpPower = s and jumpPower or 50 end
+)
+createRow(page1, "NOCLIP", 185,
+	function() return 0 end,
+	function() end,
+	function(s) noclipEnabled = s if s then startNoclip() else stopNoclip() end end,
+	true
+)
+
+-- ================= PAGE 2 (ESP & FREECAM) =================
+createRow(page2, "ESP", 5,
+	function() return 0 end,
+	function() end,
+	function(s)
+		espEnabled = s
+		if s then startESP() else stopESP() end
+	end,
+	true
+)
+
+createRow(page2, "FREECAM", 65,
+    function() return freecamSpeed end,
+    function(v) freecamSpeed = v end,
+    function(s)
+        freecamEnabled = s
+        if s then startFreecam() else stopFreecam() end
+    end
+)
+
+-- ================= TELEPORT SYSTEM (CUSTOM) =================
+local tpRow = Instance.new("Frame", page2)
+tpRow.Size = UDim2.new(1,-20,0,50)
+tpRow.Position = UDim2.new(0,10,0,125)
+tpRow.BackgroundColor3 = Color3.fromRGB(30,30,30)
+Instance.new("UICorner", tpRow)
+
+local tpLabel = Instance.new("TextLabel", tpRow)
+tpLabel.Size = UDim2.new(1,0,1,0)
+tpLabel.BackgroundTransparency = 1
+tpLabel.Text = "TELEPORT SYSTEM"
+tpLabel.TextColor3 = Color3.new(1,1,1)
+tpLabel.Font = Enum.Font.GothamBold
+tpLabel.TextSize = 14
+
+local tpList = Instance.new("Frame", page2)
+tpList.Size = UDim2.new(1,-20,0,200)
+tpList.Position = UDim2.new(0,10,0,180)
+tpList.BackgroundColor3 = Color3.fromRGB(15,15,15)
+tpList.Visible = false
+Instance.new("UICorner", tpList)
+
+local listScroll = Instance.new("ScrollingFrame", tpList)
+listScroll.Size = UDim2.new(1,-10,1,-10)
+listScroll.Position = UDim2.new(0,5,0,5)
+listScroll.BackgroundTransparency = 1
+listScroll.ScrollBarThickness = 2
+
+local listLayout = Instance.new("UIListLayout", listScroll)
+listLayout.Padding = UDim.new(0,5)
+
+local function updateTPList()
+    for _,v in pairs(listScroll:GetChildren()) do
+        if v:IsA("TextButton") then v:Destroy() end
+    end
+    for _,p in pairs(game.Players:GetPlayers()) do
+        if p ~= player then
+            local btn = Instance.new("TextButton", listScroll)
+            btn.Size = UDim2.new(1,0,0,30)
+            btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+            btn.Text = p.Name
+            btn.TextColor3 = Color3.new(1,1,1)
+            btn.Font = Enum.Font.Gotham
+            Instance.new("UICorner", btn)
+            btn.MouseButton1Click:Connect(function()
+                if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    getChar():SetPrimaryPartCFrame(p.Character.HumanoidRootPart.CFrame)
+                end
+            end)
+        end
+    end
+    listScroll.CanvasSize = UDim2.new(0,0,0, listLayout.AbsoluteContentSize.Y)
+end
+
+local tpMainBtn = Instance.new("TextButton", tpRow)
+tpMainBtn.Size = UDim2.new(1,0,1,0)
+tpMainBtn.BackgroundTransparency = 1
+tpMainBtn.Text = ""
+tpMainBtn.MouseButton1Click:Connect(function()
+    tpList.Visible = not tpList.Visible
+    if tpList.Visible then updateTPList() end
+end)
+
+-- ================= RESPAWN =================
+player.CharacterAdded:Connect(function()
+	task.wait(1)
+	humanoid = getHumanoid()
+	if speedEnabled then humanoid.WalkSpeed = walkSpeed end
+	if jumpEnabled then humanoid.JumpPower = jumpPower end
+	if noclipEnabled then startNoclip() end
+	if flyEnabled then startFly() end
+	if espEnabled then stopESP() startESP() end
+    if freecamEnabled then stopFreecam() startFreecam() end
 end)
