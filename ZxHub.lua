@@ -56,7 +56,22 @@ UIS.InputEnded:Connect(function(input)
     end
 end)
 
--- ================= AIMBOT LOGIC (CENTERED + AUTO TEAM CHECK) =================
+-- ================= NEW LOGIC: VISIBILITY CHECK =================
+local function isVisible(part)
+    local char = player.Character
+    if not char then return false end
+    
+    -- สร้าง Ray เพื่อเช็คว่ามีอะไรขวางระหว่างกล้องกับเป้าหมายไหม
+    local ray = Ray.new(camera.CFrame.Position, (part.Position - camera.CFrame.Position).Unit * 1000)
+    local hit, pos = workspace:FindPartOnRayWithIgnoreList(ray, {char, camera})
+    
+    if hit and hit:IsDescendantOf(part.Parent) then
+        return true
+    end
+    return false
+end
+
+-- ================= AIMBOT LOGIC (CENTERED + HITBOX CHECK) =================
 local function getClosestPlayerToCenter()
     local target = nil
     local shortestDistance = fovRadius
@@ -64,19 +79,23 @@ local function getClosestPlayerToCenter()
 
     for _, p in ipairs(game.Players:GetPlayers()) do
         if p ~= player and p.Character then
-            -- ระบบเช็คทีมอัตโนมัติ (ไม่ต้องมีปุ่มแยก)
+            -- ระบบเช็คทีม
             if p.Team == player.Team then continue end
             
-            local head = p.Character:FindFirstChild("Head")
+            -- เลือก Hitbox ที่จะล็อค (จัดลำดับความสำคัญ: หัว > ตัว)
+            local targetHitbox = p.Character:FindFirstChild("Head") or p.Character:FindFirstChild("HumanoidRootPart")
             local hum = p.Character:FindFirstChildOfClass("Humanoid")
             
-            if head and hum and hum.Health > 0 then
-                local pos, onScreen = camera:WorldToViewportPoint(head.Position)
+            if targetHitbox and hum and hum.Health > 0 then
+                local pos, onScreen = camera:WorldToViewportPoint(targetHitbox.Position)
+                
                 if onScreen then
                     local distance = (Vector2.new(pos.X, pos.Y) - screenCenter).Magnitude
-                    if distance < shortestDistance then
+                    
+                    -- ตรวจสอบว่าอยู่ในวงกลม และ มองเห็นตัวจริงๆ (ไม่โดนกำแพงบัง)
+                    if distance < shortestDistance and isVisible(targetHitbox) then
                         shortestDistance = distance
-                        target = head
+                        target = targetHitbox
                     end
                 end
             end
@@ -96,7 +115,9 @@ RunService.RenderStepped:Connect(function()
     if aimbotEnabled and holdingAim then
         local targetPart = getClosestPlayerToCenter()
         if targetPart then
+            -- คำนวณตำแหน่งที่จะหันไป (เป้าหมาย)
             local lookAt = CFrame.new(camera.CFrame.Position, targetPart.Position)
+            -- ใช้ Lerp เพื่อให้การล็อคดูลื่นและไม่กระตุกจนหันจอไม่ได้
             camera.CFrame = camera.CFrame:Lerp(lookAt, aimbotSmoothness)
         end
     end
