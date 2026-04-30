@@ -15,7 +15,6 @@ local jumpEnabled = false
 local noclipEnabled = false
 local espEnabled = false
 local aimbotEnabled = false
-local teamCheck = true
 
 local flySpeed = 8
 local walkSpeed = 16
@@ -23,7 +22,7 @@ local jumpPower = 50
 local aimbotSmoothness = 0.15
 local fovRadius = 150
 
--- ระบบวงกลม FOV (ปรับเป็นกลางจอ)
+-- ระบบวงกลม FOV (ล็อคกลางจอ)
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 1.5
 FOVCircle.Color = Color3.fromRGB(0, 255, 120)
@@ -44,16 +43,18 @@ end
 
 local humanoid = getHumanoid()
 
--- ================= AIMBOT LOGIC (CENTER SCREEN) =================
+-- ================= AIMBOT LOGIC (FIXED CENTER + AUTO TEAM CHECK) =================
 local function getClosestPlayerToCenter()
     local target = nil
     local shortestDistance = fovRadius
+    -- คำนวณจุดกึ่งกลางหน้าจอที่แท้จริง
     local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
 
     for _, p in ipairs(game.Players:GetPlayers()) do
         if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            -- ระบบเช็คทีมรวมอยู่ในนี้
-            if teamCheck and p.Team == player.Team then continue end
+            
+            -- ระบบเช็คทีม (รวมอยู่ในนี้เลย ไม่ต้องกดปุ่มแยก)
+            if p.Team == player.Team then continue end
             
             local hum = p.Character:FindFirstChildOfClass("Humanoid")
             if hum and hum.Health > 0 then
@@ -73,8 +74,9 @@ local function getClosestPlayerToCenter()
 end
 
 RunService.RenderStepped:Connect(function()
-    -- ปรับให้วงกลมอยู่กลางจอตลอดเวลา
-    FOVCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+    -- ล็อควงกลมไว้กลางจอตลอดเวลา
+    local center = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+    FOVCircle.Position = center
     FOVCircle.Radius = fovRadius
     FOVCircle.Visible = aimbotEnabled
 
@@ -83,6 +85,7 @@ RunService.RenderStepped:Connect(function()
         if target and target.Character then
             local part = target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
             if part then
+                -- ล็อคเป้าแบบนุ่มนวล (Smooth)
                 camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, part.Position), aimbotSmoothness)
             end
         end
@@ -556,18 +559,11 @@ createRow(page2, "ESP", 5,
 	true
 )
 
--- ปุ่ม AIMBOT (เช็คทีมในตัว)
+-- ปุ่ม AIMBOT (ระบบเช็คทีมและวงกลมกลางจอถูกรวมไว้ในปุ่มนี้แล้ว)
 createRow(page2, "AIMBOT", 65,
     function() return aimbotSmoothness * 1000 end,
     function(v) aimbotSmoothness = v / 1000 end,
     function(s) aimbotEnabled = s end
-)
-
-createRow(page2, "TEAM CHECK", 125,
-    function() return 0 end,
-    function() end,
-    function(s) teamCheck = s end,
-    true
 )
 
 -- ================= RESPAWN =================
