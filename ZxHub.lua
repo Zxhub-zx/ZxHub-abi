@@ -13,7 +13,6 @@ local speedEnabled = false
 local jumpEnabled = false
 local noclipEnabled = false
 local espEnabled = false
-local invisEnabled = false
 
 local flySpeed = 8
 local walkSpeed = 16
@@ -143,7 +142,7 @@ end
 tab1Btn.MouseButton1Click:Connect(function() switchTab(1) end)
 tab2Btn.MouseButton1Click:Connect(function() switchTab(2) end)
 
--- ================= LOGO =================
+-- ================= LOGO / DRAG =================
 local logo = Instance.new("TextButton", gui)
 logo.Size = UDim2.new(0,70,0,70)
 logo.Position = UDim2.new(0,20,0.5,-35)
@@ -368,63 +367,7 @@ local function stopESP()
 	end
 end
 
--- ================= INVISIBLE =================
-local invisConn
-
-local function startInvis()
-	local char = player.Character
-	if not char then return end
-	for _, part in ipairs(char:GetDescendants()) do
-		if part:IsA("BasePart") then
-			part.Transparency = 1
-		elseif part:IsA("Decal") then
-			part.Transparency = 1
-		elseif part:IsA("BillboardGui") or part:IsA("NameDisplayAdornment") then
-			part.Enabled = false
-		end
-	end
-	local hum = char:FindFirstChildOfClass("Humanoid")
-	if hum then hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end
-
-	invisConn = RunService.Heartbeat:Connect(function()
-		local c = player.Character
-		if not c then return end
-		for _, part in ipairs(c:GetDescendants()) do
-			if part:IsA("BasePart") then
-				part.Transparency = 1
-			elseif part:IsA("Decal") then
-				part.Transparency = 1
-			elseif part:IsA("BillboardGui") or part:IsA("NameDisplayAdornment") then
-				part.Enabled = false
-			end
-		end
-		local h = c:FindFirstChildOfClass("Humanoid")
-		if h then h.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end
-	end)
-end
-
-local function stopInvis()
-	if invisConn then invisConn:Disconnect() invisConn = nil end
-	local char = player.Character
-	if not char then return end
-	for _, part in ipairs(char:GetDescendants()) do
-		if part:IsA("BasePart") then
-			if part.Name == "HumanoidRootPart" then
-				part.Transparency = 1
-			else
-				part.Transparency = 0
-			end
-		elseif part:IsA("Decal") then
-			part.Transparency = 0
-		elseif part:IsA("BillboardGui") or part:IsA("NameDisplayAdornment") then
-			part.Enabled = true
-		end
-	end
-	local hum = char:FindFirstChildOfClass("Humanoid")
-	if hum then hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Automatic end
-end
-
--- ================= CREATE ROW (รับ parent) =================
+-- ================= CREATE ROW =================
 local function createRow(parent, name, yPos, getVal, setVal, toggle, noSlider)
 	local row = Instance.new("Frame", parent)
 	row.Size = UDim2.new(1,-20,0,50)
@@ -463,7 +406,6 @@ local function createRow(parent, name, yPos, getVal, setVal, toggle, noSlider)
 
 	if not noSlider then
 		local maxVal = 500
-
 		local sliderBg = Instance.new("Frame", row)
 		sliderBg.Size = UDim2.new(0,140,0,10)
 		sliderBg.Position = UDim2.new(0,130,0.5,-5)
@@ -554,15 +496,6 @@ createRow(page2, "ESP", 5,
 	end,
 	true
 )
-createRow(page2, "INVISIBLE", 65,
-	function() return 0 end,
-	function() end,
-	function(s)
-		invisEnabled = s
-		if s then startInvis() else stopInvis() end
-	end,
-	true
-)
 
 -- ================= RESPAWN =================
 player.CharacterAdded:Connect(function()
@@ -573,5 +506,4 @@ player.CharacterAdded:Connect(function()
 	if noclipEnabled then startNoclip() end
 	if flyEnabled then startFly() end
 	if espEnabled then stopESP() startESP() end
-	if invisEnabled then startInvis() end
 end)
