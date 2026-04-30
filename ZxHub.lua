@@ -14,15 +14,16 @@ local speedEnabled = false
 local jumpEnabled = false
 local noclipEnabled = false
 local espEnabled = false
-local aimbotEnabled = false
+local aimbotEnabled = false -- ระบบใหม่
+local holdingAim = false -- เช็คการคลิกขวา
 
 local flySpeed = 8
 local walkSpeed = 16
 local jumpPower = 50
-local aimbotSmoothness = 0.15
-local fovRadius = 150
+local aimbotSmoothness = 0.1 -- ค่าความลื่น (0.1 = ลื่นมาก)
+local fovRadius = 150 -- ขนาดวงกลม
 
--- ระบบวงกลม FOV (ล็อคกลางจอ)
+-- ระบบวงกลม FOV (ล็อคกลางจอถาวร)
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 1.5
 FOVCircle.Color = Color3.fromRGB(0, 255, 120)
@@ -43,28 +44,39 @@ end
 
 local humanoid = getHumanoid()
 
--- ================= AIMBOT LOGIC (FIXED CENTER + AUTO TEAM CHECK) =================
+-- เช็คการกดคลิกขวา
+UIS.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        holdingAim = true
+    end
+end)
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        holdingAim = false
+    end
+end)
+
+-- ================= AIMBOT LOGIC (CENTERED + AUTO TEAM CHECK) =================
 local function getClosestPlayerToCenter()
     local target = nil
     local shortestDistance = fovRadius
-    -- คำนวณจุดกึ่งกลางหน้าจอที่แท้จริง
     local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
 
     for _, p in ipairs(game.Players:GetPlayers()) do
-        if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            
-            -- ระบบเช็คทีม (รวมอยู่ในนี้เลย ไม่ต้องกดปุ่มแยก)
+        if p ~= player and p.Character then
+            -- ระบบเช็คทีมอัตโนมัติ (ไม่ต้องมีปุ่มแยก)
             if p.Team == player.Team then continue end
             
+            local head = p.Character:FindFirstChild("Head")
             local hum = p.Character:FindFirstChildOfClass("Humanoid")
-            if hum and hum.Health > 0 then
-                local pos, onScreen = camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
+            
+            if head and hum and hum.Health > 0 then
+                local pos, onScreen = camera:WorldToViewportPoint(head.Position)
                 if onScreen then
                     local distance = (Vector2.new(pos.X, pos.Y) - screenCenter).Magnitude
-                    
                     if distance < shortestDistance then
                         shortestDistance = distance
-                        target = p
+                        target = head
                     end
                 end
             end
@@ -80,14 +92,12 @@ RunService.RenderStepped:Connect(function()
     FOVCircle.Radius = fovRadius
     FOVCircle.Visible = aimbotEnabled
 
-    if aimbotEnabled then
-        local target = getClosestPlayerToCenter()
-        if target and target.Character then
-            local part = target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
-            if part then
-                -- ล็อคเป้าแบบนุ่มนวล (Smooth)
-                camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, part.Position), aimbotSmoothness)
-            end
+    -- ล็อคเป้าเมื่อเปิดปุ่ม และ คลิกขวาค้าง
+    if aimbotEnabled and holdingAim then
+        local targetPart = getClosestPlayerToCenter()
+        if targetPart then
+            local lookAt = CFrame.new(camera.CFrame.Position, targetPart.Position)
+            camera.CFrame = camera.CFrame:Lerp(lookAt, aimbotSmoothness)
         end
     end
 end)
@@ -439,7 +449,7 @@ local function createRow(parent, name, yPos, getVal, setVal, toggle, noSlider)
 	Instance.new("UICorner", row).CornerRadius = UDim.new(0,8)
 
 	local label = Instance.new("TextLabel", row)
-	label.Size = UDim2.new(0,120,1,0)
+	label.Size = UDim2.new(0,150,1,0)
 	label.Position = UDim2.new(0,10,0,0)
 	label.BackgroundTransparency = 1
 	label.Text = name
@@ -548,7 +558,7 @@ createRow(page1, "NOCLIP", 185,
 	true
 )
 
--- ================= PAGE 2 ROWS (AIMBOT MODIFIED) =================
+-- ================= PAGE 2 ROWS =================
 createRow(page2, "ESP", 5,
 	function() return 0 end,
 	function() end,
@@ -559,11 +569,11 @@ createRow(page2, "ESP", 5,
 	true
 )
 
--- ปุ่ม AIMBOT (ระบบเช็คทีมและวงกลมกลางจอถูกรวมไว้ในปุ่มนี้แล้ว)
-createRow(page2, "AIMBOT", 65,
-    function() return aimbotSmoothness * 1000 end,
-    function(v) aimbotSmoothness = v / 1000 end,
-    function(s) aimbotEnabled = s end
+-- ปุ่ม AIMBOT (ล็อคหัว + เช็คทีม + วงกลมกลางจอ รวมในนี้หมดแล้ว)
+createRow(page2, "AIMBOT (R-Click)", 65,
+	function() return aimbotSmoothness * 1000 end,
+	function(v) aimbotSmoothness = v / 1000 end,
+	function(s) aimbotEnabled = s end
 )
 
 -- ================= RESPAWN =================
