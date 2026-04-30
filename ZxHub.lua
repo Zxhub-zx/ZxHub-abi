@@ -23,7 +23,7 @@ local jumpPower = 50
 local aimbotSmoothness = 0.15
 local fovRadius = 150
 
--- ระบบวงกลม FOV (Drawing API)
+-- ระบบวงกลม FOV (ปรับเป็นกลางจอ)
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 1.5
 FOVCircle.Color = Color3.fromRGB(0, 255, 120)
@@ -44,21 +44,22 @@ end
 
 local humanoid = getHumanoid()
 
--- ================= AIMBOT LOGIC (ADDED) =================
-local function getClosestPlayerToMouse()
+-- ================= AIMBOT LOGIC (CENTER SCREEN) =================
+local function getClosestPlayerToCenter()
     local target = nil
     local shortestDistance = fovRadius
+    local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
 
     for _, p in ipairs(game.Players:GetPlayers()) do
         if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            -- ระบบเช็คทีมรวมอยู่ในนี้
             if teamCheck and p.Team == player.Team then continue end
             
             local hum = p.Character:FindFirstChildOfClass("Humanoid")
             if hum and hum.Health > 0 then
                 local pos, onScreen = camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
                 if onScreen then
-                    local mouseLocation = UIS:GetMouseLocation()
-                    local distance = (Vector2.new(pos.X, pos.Y) - mouseLocation).Magnitude
+                    local distance = (Vector2.new(pos.X, pos.Y) - screenCenter).Magnitude
                     
                     if distance < shortestDistance then
                         shortestDistance = distance
@@ -72,12 +73,13 @@ local function getClosestPlayerToMouse()
 end
 
 RunService.RenderStepped:Connect(function()
-    FOVCircle.Position = UIS:GetMouseLocation()
+    -- ปรับให้วงกลมอยู่กลางจอตลอดเวลา
+    FOVCircle.Position = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
     FOVCircle.Radius = fovRadius
     FOVCircle.Visible = aimbotEnabled
 
     if aimbotEnabled then
-        local target = getClosestPlayerToMouse()
+        local target = getClosestPlayerToCenter()
         if target and target.Character then
             local part = target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
             if part then
@@ -543,7 +545,7 @@ createRow(page1, "NOCLIP", 185,
 	true
 )
 
--- ================= PAGE 2 ROWS (AIMBOT ADDED) =================
+-- ================= PAGE 2 ROWS (AIMBOT MODIFIED) =================
 createRow(page2, "ESP", 5,
 	function() return 0 end,
 	function() end,
@@ -554,9 +556,9 @@ createRow(page2, "ESP", 5,
 	true
 )
 
--- เพิ่มปุ่ม AIMBOT และ TEAM CHECK
+-- ปุ่ม AIMBOT (เช็คทีมในตัว)
 createRow(page2, "AIMBOT", 65,
-    function() return aimbotSmoothness * 1000 end, -- ปรับค่าโชว์ใน Slider
+    function() return aimbotSmoothness * 1000 end,
     function(v) aimbotSmoothness = v / 1000 end,
     function(s) aimbotEnabled = s end
 )
