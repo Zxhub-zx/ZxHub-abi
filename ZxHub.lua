@@ -13,10 +13,13 @@ local speedEnabled = false
 local jumpEnabled = false
 local noclipEnabled = false
 local espEnabled = false
+local aimbotEnabled = false -- ระบบใหม่
 
 local flySpeed = 8
 local walkSpeed = 16
 local jumpPower = 50
+local aimbotSmoothness = 0.5 -- ความลื่นของ Aimbot (0.1 - 1.0)
+local aimPart = "Head"
 
 local up = false
 local down = false
@@ -31,6 +34,44 @@ end
 
 local humanoid = getHumanoid()
 
+-- ================= AIMBOT LOGIC =================
+local function getClosestPlayerToChar()
+    local target = nil
+    local shortestDistance = math.huge
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+
+    for _, p in ipairs(game.Players:GetPlayers()) do
+        if p ~= player and p.Character and p.Character:FindFirstChild(aimPart) then
+            local hum = p.Character:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 then
+                -- ระบบ Auto Team Check
+                if p.Team ~= nil and p.Team == player.Team then continue end
+
+                local dist = (p.Character[aimPart].Position - char.HumanoidRootPart.Position).Magnitude
+                if dist < shortestDistance then
+                    shortestDistance = dist
+                    target = p
+                end
+            end
+        end
+    end
+    return target
+end
+
+RunService.RenderStepped:Connect(function()
+    if aimbotEnabled then
+        local target = getClosestPlayerToChar()
+        if target and target.Character and target.Character:FindFirstChild(aimPart) then
+            local cam = workspace.CurrentCamera
+            local targetPos = target.Character[aimPart].Position
+            -- ล็อคเป้าแบบ Smooth
+            cam.CFrame = cam.CFrame:Lerp(CFrame.new(cam.CFrame.Position, targetPos), aimbotSmoothness)
+        end
+    end
+end)
+
+-- ================= GUI SETUP =================
 pcall(function()
 	if player.PlayerGui:FindFirstChild("ZxHubGUI") then
 		player.PlayerGui.ZxHubGUI:Destroy()
@@ -495,6 +536,13 @@ createRow(page2, "ESP", 5,
 		if s then startESP() else stopESP() end
 	end,
 	true
+)
+
+-- เพิ่มปุ่ม AIMBOT (CLOSEST) ในหน้า 2
+createRow(page2, "AIMBOT", 65,
+	function() return aimbotSmoothness * 100 end, -- แปลงเป็น % สำหรับ Slider
+	function(v) aimbotSmoothness = v / 100 end,
+	function(s) aimbotEnabled = s end
 )
 
 -- ================= RESPAWN =================
