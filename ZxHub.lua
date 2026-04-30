@@ -7,6 +7,7 @@ repeat task.wait() until player:FindFirstChild("PlayerGui")
 
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local camera = workspace.CurrentCamera
 
 local flyEnabled = false
 local speedEnabled = false
@@ -14,12 +15,21 @@ local jumpEnabled = false
 local noclipEnabled = false
 local espEnabled = false
 local aimbotEnabled = false
+local teamCheck = true
 
 local flySpeed = 8
 local walkSpeed = 16
 local jumpPower = 50
-local aimbotSmoothness = 0.2 -- ปรับให้ลดลงเพื่อให้หันตามไวขึ้น
-local aimPart = "Head"
+local aimbotSmoothness = 0.15
+local fovRadius = 150
+
+-- ระบบวงกลม FOV (Drawing API)
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Thickness = 1.5
+FOVCircle.Color = Color3.fromRGB(0, 255, 120)
+FOVCircle.Transparency = 0.7
+FOVCircle.Filled = false
+FOVCircle.Visible = false
 
 local up = false
 local down = false
@@ -34,26 +44,22 @@ end
 
 local humanoid = getHumanoid()
 
--- ================= AIMBOT LOGIC (CLOSEST TO MOUSE) =================
+-- ================= AIMBOT LOGIC (ADDED) =================
 local function getClosestPlayerToMouse()
     local target = nil
-    local shortestDistance = math.huge
-    local cam = workspace.CurrentCamera
+    local shortestDistance = fovRadius
 
     for _, p in ipairs(game.Players:GetPlayers()) do
-        if p ~= player and p.Character and p.Character:FindFirstChild(aimPart) then
+        if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            if teamCheck and p.Team == player.Team then continue end
+            
             local hum = p.Character:FindFirstChildOfClass("Humanoid")
             if hum and hum.Health > 0 then
-                -- Auto Team Check
-                if p.Team ~= nil and p.Team == player.Team then continue end
-
-                -- ตรวจสอบว่าศัตรูอยู่บนหน้าจอหรือไม่
-                local pos, onScreen = cam:WorldToViewportPoint(p.Character[aimPart].Position)
+                local pos, onScreen = camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
                 if onScreen then
                     local mouseLocation = UIS:GetMouseLocation()
                     local distance = (Vector2.new(pos.X, pos.Y) - mouseLocation).Magnitude
                     
-                    -- เช็คคนที่ใกล้เป้าเล็ง (เมาส์) ที่สุด
                     if distance < shortestDistance then
                         shortestDistance = distance
                         target = p
@@ -66,20 +72,22 @@ local function getClosestPlayerToMouse()
 end
 
 RunService.RenderStepped:Connect(function()
+    FOVCircle.Position = UIS:GetMouseLocation()
+    FOVCircle.Radius = fovRadius
+    FOVCircle.Visible = aimbotEnabled
+
     if aimbotEnabled then
         local target = getClosestPlayerToMouse()
-        if target and target.Character and target.Character:FindFirstChild(aimPart) then
-            local cam = workspace.CurrentCamera
-            local targetPos = target.Character[aimPart].Position
-            
-            -- ใช้ CFrame.lookAt เพื่อให้หันหน้าจอไปหาเป้าหมาย แต่ยังยอมให้เราขยับเมาส์ได้บ้าง
-            local lookAtCFrame = CFrame.new(cam.CFrame.Position, targetPos)
-            cam.CFrame = cam.CFrame:Lerp(lookAtCFrame, aimbotSmoothness)
+        if target and target.Character then
+            local part = target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
+            if part then
+                camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, part.Position), aimbotSmoothness)
+            end
         end
     end
 end)
 
--- ================= GUI SETUP (โค้ดเดิมของคุณ) =================
+-- ================= GUI SETUP =================
 pcall(function()
 	if player.PlayerGui:FindFirstChild("ZxHubGUI") then
 		player.PlayerGui.ZxHubGUI:Destroy()
@@ -535,7 +543,7 @@ createRow(page1, "NOCLIP", 185,
 	true
 )
 
--- ================= PAGE 2 ROWS =================
+-- ================= PAGE 2 ROWS (AIMBOT ADDED) =================
 createRow(page2, "ESP", 5,
 	function() return 0 end,
 	function() end,
@@ -546,11 +554,18 @@ createRow(page2, "ESP", 5,
 	true
 )
 
--- ปุ่ม AIMBOT (Closest to Mouse)
+-- เพิ่มปุ่ม AIMBOT และ TEAM CHECK
 createRow(page2, "AIMBOT", 65,
-	function() return aimbotSmoothness * 100 end,
-	function(v) aimbotSmoothness = v / 100 end,
-	function(s) aimbotEnabled = s end
+    function() return aimbotSmoothness * 1000 end, -- ปรับค่าโชว์ใน Slider
+    function(v) aimbotSmoothness = v / 1000 end,
+    function(s) aimbotEnabled = s end
+)
+
+createRow(page2, "TEAM CHECK", 125,
+    function() return 0 end,
+    function() end,
+    function(s) teamCheck = s end,
+    true
 )
 
 -- ================= RESPAWN =================
