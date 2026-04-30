@@ -312,7 +312,6 @@ local function addESP(target)
 	local root = char:FindFirstChild("HumanoidRootPart")
 	if not root then return end
 
-	-- Highlight
 	local hl = Instance.new("SelectionBox")
 	hl.Adornee = char
 	hl.Color3 = Color3.fromRGB(255,255,255)
@@ -321,7 +320,6 @@ local function addESP(target)
 	hl.SurfaceColor3 = Color3.fromRGB(255,255,255)
 	hl.Parent = gui
 
-	-- BillboardGui ชื่อ
 	local bb = Instance.new("BillboardGui")
 	bb.Adornee = root
 	bb.Size = UDim2.new(0,100,0,30)
@@ -371,17 +369,42 @@ local function stopESP()
 end
 
 -- ================= INVISIBLE =================
+local invisConn
+
 local function startInvis()
 	local char = player.Character
 	if not char then return end
 	for _, part in ipairs(char:GetDescendants()) do
-		if part:IsA("BasePart") or part:IsA("Decal") then
+		if part:IsA("BasePart") then
 			part.Transparency = 1
+		elseif part:IsA("Decal") then
+			part.Transparency = 1
+		elseif part:IsA("BillboardGui") or part:IsA("NameDisplayAdornment") then
+			part.Enabled = false
 		end
 	end
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if hum then hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end
+
+	invisConn = RunService.Heartbeat:Connect(function()
+		local c = player.Character
+		if not c then return end
+		for _, part in ipairs(c:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.Transparency = 1
+			elseif part:IsA("Decal") then
+				part.Transparency = 1
+			elseif part:IsA("BillboardGui") or part:IsA("NameDisplayAdornment") then
+				part.Enabled = false
+			end
+		end
+		local h = c:FindFirstChildOfClass("Humanoid")
+		if h then h.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end
+	end)
 end
 
 local function stopInvis()
+	if invisConn then invisConn:Disconnect() invisConn = nil end
 	local char = player.Character
 	if not char then return end
 	for _, part in ipairs(char:GetDescendants()) do
@@ -393,8 +416,12 @@ local function stopInvis()
 			end
 		elseif part:IsA("Decal") then
 			part.Transparency = 0
+		elseif part:IsA("BillboardGui") or part:IsA("NameDisplayAdornment") then
+			part.Enabled = true
 		end
 	end
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if hum then hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Automatic end
 end
 
 -- ================= CREATE ROW (รับ parent) =================
