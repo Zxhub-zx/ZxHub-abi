@@ -14,12 +14,11 @@ local jumpEnabled = false
 local noclipEnabled = false
 local espEnabled = false
 local freecamEnabled = false
-local selectedPlayer = nil
-local tpListVisible = false -- สำหรับเปิด/ปิดรายชื่อ TP
 
 local flySpeed = 8
 local walkSpeed = 16
 local jumpPower = 50
+local freecamSpeed = 2
 
 local up = false
 local down = false
@@ -61,7 +60,9 @@ glow.Thickness = 2
 
 local topBar = Instance.new("Frame", frame)
 topBar.Size = UDim2.new(1,0,0,40)
-topBar.BackgroundTransparency = 1
+topBar.BackgroundTransparency = 0 -- ทำให้ทึบเพื่อระบุว่าเป็นส่วนที่ลากได้
+topBar.BackgroundColor3 = Color3.fromRGB(30,30,30)
+Instance.new("UICorner", topBar).CornerRadius = UDim.new(0,14)
 
 local title = Instance.new("TextLabel", topBar)
 title.Size = UDim2.new(1,0,1,0)
@@ -88,6 +89,7 @@ minBtn.Position = UDim2.new(1,-35,0,5)
 minBtn.Text = "-"
 minBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
 minBtn.TextColor3 = Color3.fromRGB(255,255,255)
+minBtn.ZIndex = 5
 Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0,6)
 
 -- ================= TAB BUTTONS =================
@@ -111,22 +113,22 @@ tab2Btn.TextColor3 = Color3.fromRGB(255,255,255)
 tab2Btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
 Instance.new("UICorner", tab2Btn).CornerRadius = UDim.new(0,6)
 
--- ================= PAGE CONTAINERS =================
+-- ================= PAGE CONTAINERS (SCROLLING) =================
 local page1 = Instance.new("ScrollingFrame", frame)
 page1.Size = UDim2.new(1,0,1,-80)
 page1.Position = UDim2.new(0,0,0,78)
 page1.BackgroundTransparency = 1
-page1.BorderSizePixel = 0
-page1.ScrollBarThickness = 2
 page1.Visible = true
+page1.ScrollBarThickness = 2
+page1.CanvasSize = UDim2.new(0,0,0,400)
 
 local page2 = Instance.new("ScrollingFrame", frame)
 page2.Size = UDim2.new(1,0,1,-80)
 page2.Position = UDim2.new(0,0,0,78)
 page2.BackgroundTransparency = 1
-page2.BorderSizePixel = 0
-page2.ScrollBarThickness = 2
 page2.Visible = false
+page2.ScrollBarThickness = 2
+page2.CanvasSize = UDim2.new(0,0,0,500)
 
 local function switchTab(pg)
 	if pg == 1 then
@@ -149,7 +151,7 @@ end
 tab1Btn.MouseButton1Click:Connect(function() switchTab(1) end)
 tab2Btn.MouseButton1Click:Connect(function() switchTab(2) end)
 
--- ================= LOGO / DRAG (Improved) =================
+-- ================= LOGO / DRAG FIX =================
 local logo = Instance.new("TextButton", gui)
 logo.Size = UDim2.new(0,70,0,70)
 logo.Position = UDim2.new(0,20,0.5,-35)
@@ -201,26 +203,25 @@ downBtn.InputEnded:Connect(function(i)
 end)
 
 local function dragify(target, dragHandle)
-	local dragToggle, dragStart, startPos
-	dragHandle.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragToggle = true
-			dragStart = input.Position
-			startPos = target.Position
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then dragToggle = false end
-			end)
+	local drag = false
+	local start, pos
+	dragHandle.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			drag = true
+			start = i.Position
+			pos = target.Position
 		end
 	end)
-	UIS.InputChanged:Connect(function(input)
-		if dragToggle and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-			local delta = input.Position - dragStart
-			target.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	UIS.InputChanged:Connect(function(i)
+		if drag then
+			local d = i.Position - start
+			target.Position = UDim2.new(pos.X.Scale, pos.X.Offset+d.X, pos.Y.Scale, pos.Y.Offset+d.Y)
 		end
 	end)
+	UIS.InputEnded:Connect(function() drag = false end)
 end
 
-dragify(frame, topBar)
+dragify(frame, topBar) -- ลากได้เฉพาะ TopBar
 dragify(logo, logo)
 
 minBtn.MouseButton1Click:Connect(function()
@@ -233,38 +234,45 @@ logo.MouseButton1Click:Connect(function()
 end)
 
 -- ================= FLY =================
-local flyConn, flyBV, flyBG
+local flyConn
+local flyBV, flyBG
 
 local function startFly()
 	local char = getChar()
 	local root = char:WaitForChild("HumanoidRootPart")
 	local hum = char:WaitForChild("Humanoid")
 	hum.PlatformStand = true
-	flyBG = Instance.new("BodyGyro", root)  
-	flyBG.MaxTorque = Vector3.new(1e5,1e5,1e5)  
-	flyBG.D = 50  
-	flyBV = Instance.new("BodyVelocity", root)  
-	flyBV.MaxForce = Vector3.new(1e5,1e5,1e5)  
-	flyBV.Velocity = Vector3.zero  
-	upBtn.Visible = true  
-	downBtn.Visible = true  
-	flyConn = RunService.Heartbeat:Connect(function()  
-		local cam = workspace.CurrentCamera  
-		local dir = Vector3.zero  
-		local hum2 = char:FindFirstChildOfClass("Humanoid")  
-		if hum2 then  
-			local md = hum2.MoveDirection  
-			if md.Magnitude > 0.1 then dir += Vector3.new(md.X, 0, md.Z) end  
-		end  
-		if UIS:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end  
-		if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end  
-		if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end  
-		if UIS:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end  
-		if up then dir += Vector3.new(0,1,0) end  
-		if down then dir -= Vector3.new(0,1,0) end  
-		if dir.Magnitude > 1 then dir = dir.Unit end  
-		flyBV.Velocity = dir * flySpeed  
-		flyBG.CFrame = cam.CFrame  
+
+	flyBG = Instance.new("BodyGyro", root)
+	flyBG.MaxTorque = Vector3.new(1e5,1e5,1e5)
+	flyBG.D = 50
+
+	flyBV = Instance.new("BodyVelocity", root)
+	flyBV.MaxForce = Vector3.new(1e5,1e5,1e5)
+	flyBV.Velocity = Vector3.zero
+
+	upBtn.Visible = true
+	downBtn.Visible = true
+
+	flyConn = RunService.Heartbeat:Connect(function()
+		local cam = workspace.CurrentCamera
+		local dir = Vector3.zero
+		local hum2 = char:FindFirstChildOfClass("Humanoid")
+		if hum2 then
+			local md = hum2.MoveDirection
+			if md.Magnitude > 0.1 then
+				dir += Vector3.new(md.X, 0, md.Z)
+			end
+		end
+		if UIS:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
+		if up then dir += Vector3.new(0,1,0) end
+		if down then dir -= Vector3.new(0,1,0) end
+		if dir.Magnitude > 1 then dir = dir.Unit end
+		flyBV.Velocity = dir * flySpeed
+		flyBG.CFrame = cam.CFrame
 	end)
 end
 
@@ -277,58 +285,66 @@ local function stopFly()
 	pcall(function() getChar():WaitForChild("Humanoid").PlatformStand = false end)
 end
 
--- ================= FREECAM (Fixed Movement) =================
-local freecamConn, freecamPart
+-- ================= FREECAM SYSTEM =================
+local freecamPart
+local freecamConn
 
 local function startFreecam()
-	local char = getChar()
-	local hum = char:WaitForChild("Humanoid")
-	hum.PlatformStand = true -- ล็อคตัวละคร
-	local cam = workspace.CurrentCamera
-	freecamPart = Instance.new("Part")
-	freecamPart.Size = Vector3.new(1,1,1)
-	freecamPart.Transparency = 1
-	freecamPart.CanCollide = false
-	freecamPart.Anchored = true
-	freecamPart.CFrame = cam.CFrame
-	freecamPart.Parent = workspace
-	cam.CameraSubject = freecamPart
-	upBtn.Visible = true
-	downBtn.Visible = true
-	freecamConn = RunService.RenderStepped:Connect(function()
-		local dir = Vector3.zero
-		local speed = 2
-		local hum2 = char:FindFirstChildOfClass("Humanoid")
-		-- ใช้ MoveDirection จากตัวละคร (W,A,S,D) มาเลื่อนกล้อง
-		if hum2 and hum2.MoveDirection.Magnitude > 0 then
-			local md = hum2.MoveDirection
-			dir += Vector3.new(md.X, 0, md.Z)
-		end
-		if up then dir += Vector3.new(0,1,0) end
-		if down then dir -= Vector3.new(0,1,0) end
-		if dir.Magnitude > 0 then
-			freecamPart.CFrame = freecamPart.CFrame + (dir.Unit * speed)
-		end
-	end)
+    local char = getChar()
+    local root = char:WaitForChild("HumanoidRootPart")
+    local hum = char:WaitForChild("Humanoid")
+    local cam = workspace.CurrentCamera
+
+    root.Anchored = true -- ล็อคตัวละคร
+
+    freecamPart = Instance.new("Part")
+    freecamPart.Size = Vector3.new(1,1,1)
+    freecamPart.Transparency = 1
+    freecamPart.CanCollide = false
+    freecamPart.Anchored = true
+    freecamPart.CFrame = cam.CFrame
+    freecamPart.Parent = workspace
+    cam.CameraSubject = freecamPart
+
+    upBtn.Visible = true
+    downBtn.Visible = true
+
+    freecamConn = RunService.RenderStepped:Connect(function()
+        local moveDir = Vector3.new(0,0,0)
+        if UIS:IsKeyDown(Enum.KeyCode.W) then moveDir += cam.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then moveDir -= cam.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then moveDir -= cam.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.D) then moveDir += cam.CFrame.RightVector end
+        if up then moveDir += Vector3.new(0,1,0) end
+        if down then moveDir -= Vector3.new(0,1,0) end
+        
+        if moveDir.Magnitude > 0 then
+            freecamPart.CFrame = freecamPart.CFrame + (moveDir.Unit * freecamSpeed)
+        end
+    end)
 end
 
 local function stopFreecam()
-	if freecamConn then freecamConn:Disconnect() freecamConn = nil end
-	if freecamPart then freecamPart:Destroy() freecamPart = nil end
-	workspace.CurrentCamera.CameraSubject = getChar():WaitForChild("Humanoid")
-	upBtn.Visible = false
-	downBtn.Visible = false
-	pcall(function() getChar():WaitForChild("Humanoid").PlatformStand = false end)
+    if freecamConn then freecamConn:Disconnect() freecamConn = nil end
+    if freecamPart then freecamPart:Destroy() freecamPart = nil end
+    local char = getChar()
+    char:WaitForChild("HumanoidRootPart").Anchored = false
+    workspace.CurrentCamera.CameraSubject = char:WaitForChild("Humanoid")
+    upBtn.Visible = false
+    downBtn.Visible = false
 end
 
 -- ================= NOCLIP =================
 local noclipConn
+
 local function startNoclip()
 	noclipConn = RunService.Stepped:Connect(function()
 		local char = player.Character
 		if not char then return end
 		for _, part in ipairs(char:GetDescendants()) do
-			if part:IsA("BasePart") then part.CanCollide = false end
+			if part:IsA("BasePart") then
+				part.CanCollide = false
+			end
 		end
 	end)
 end
@@ -345,52 +361,68 @@ end
 
 -- ================= ESP =================
 local espObjects = {}
+
 local function addESP(target)
 	if target == player then return end
 	local char = target.Character
 	if not char then return end
 	local root = char:FindFirstChild("HumanoidRootPart")
 	if not root then return end
-	local hl = Instance.new("SelectionBox")  
-	hl.Adornee = char  
-	hl.Color3 = Color3.fromRGB(255,255,255)  
-	hl.LineThickness = 0.05  
-	hl.SurfaceTransparency = 0.7  
-	hl.SurfaceColor3 = Color3.fromRGB(255,255,255)  
-	hl.Parent = gui  
-	local bb = Instance.new("BillboardGui")  
-	bb.Adornee = root  
-	bb.Size = UDim2.new(0,100,0,30)  
-	bb.StudsOffset = Vector3.new(0,3,0)  
-	bb.AlwaysOnTop = true  
-	bb.Parent = gui  
-	local nameLabel = Instance.new("TextLabel", bb)  
-	nameLabel.Size = UDim2.new(1,0,1,0)  
-	nameLabel.BackgroundTransparency = 1  
-	nameLabel.Text = target.Name  
-	nameLabel.TextColor3 = Color3.fromRGB(255,255,255)  
-	nameLabel.Font = Enum.Font.GothamBold  
-	nameLabel.TextSize = 14  
-	nameLabel.TextStrokeTransparency = 0  
+
+	local hl = Instance.new("SelectionBox")
+	hl.Adornee = char
+	hl.Color3 = Color3.fromRGB(255,255,255)
+	hl.LineThickness = 0.05
+	hl.SurfaceTransparency = 0.7
+	hl.SurfaceColor3 = Color3.fromRGB(255,255,255)
+	hl.Parent = gui
+
+	local bb = Instance.new("BillboardGui")
+	bb.Adornee = root
+	bb.Size = UDim2.new(0,100,0,30)
+	bb.StudsOffset = Vector3.new(0,3,0)
+	bb.AlwaysOnTop = true
+	bb.Parent = gui
+
+	local nameLabel = Instance.new("TextLabel", bb)
+	nameLabel.Size = UDim2.new(1,0,1,0)
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.Text = target.Name
+	nameLabel.TextColor3 = Color3.fromRGB(255,255,255)
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.TextSize = 14
+	nameLabel.TextStrokeTransparency = 0
+
 	espObjects[target] = {hl, bb}
 end
 
 local function removeESP(target)
 	if espObjects[target] then
-		for _, obj in ipairs(espObjects[target]) do obj:Destroy() end
+		for _, obj in ipairs(espObjects[target]) do
+			obj:Destroy()
+		end
 		espObjects[target] = nil
 	end
 end
 
 local function startESP()
-	for _, p in ipairs(game.Players:GetPlayers()) do addESP(p) end
+	for _, p in ipairs(game.Players:GetPlayers()) do
+		addESP(p)
+	end
 	game.Players.PlayerAdded:Connect(function(p)
-		if espEnabled then p.CharacterAdded:Connect(function() task.wait(1) addESP(p) end) end
+		if espEnabled then
+			p.CharacterAdded:Connect(function()
+				task.wait(1)
+				addESP(p)
+			end)
+		end
 	end)
 end
 
 local function stopESP()
-	for _, p in ipairs(game.Players:GetPlayers()) do removeESP(p) end
+	for _, p in ipairs(game.Players:GetPlayers()) do
+		removeESP(p)
+	end
 end
 
 -- ================= CREATE ROW =================
@@ -402,144 +434,183 @@ local function createRow(parent, name, yPos, getVal, setVal, toggle, noSlider)
 	row.BorderSizePixel = 0
 	Instance.new("UICorner", row).CornerRadius = UDim.new(0,8)
 
-	local labelBtn = Instance.new("TextButton", row)  
-	labelBtn.Size = UDim2.new(0,120,1,0)  
-	labelBtn.Position = UDim2.new(0,10,0,0)  
-	labelBtn.BackgroundTransparency = 1  
-	labelBtn.Text = name  
-	labelBtn.TextColor3 = Color3.fromRGB(255,255,255)  
-	labelBtn.Font = Enum.Font.GothamBold  
-	labelBtn.TextSize = 14  
-	labelBtn.TextXAlignment = Enum.TextXAlignment.Left  
+	local label = Instance.new("TextLabel", row)
+	label.Size = UDim2.new(0,120,1,0)
+	label.Position = UDim2.new(0,10,0,0)
+	label.BackgroundTransparency = 1
+	label.Text = name
+	label.TextColor3 = Color3.fromRGB(255,255,255)
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 14
+	label.TextXAlignment = Enum.TextXAlignment.Left
 
-	local togBtn = Instance.new("TextButton", row)  
-	togBtn.Size = UDim2.new(0,54,0,28)  
-	togBtn.Position = UDim2.new(1,-64,0.5,-14)  
-	togBtn.Text = "OFF"  
-	togBtn.Font = Enum.Font.GothamBold  
-	togBtn.TextSize = 12  
-	togBtn.TextColor3 = Color3.fromRGB(255,255,255)  
-	togBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)  
-	Instance.new("UICorner", togBtn).CornerRadius = UDim.new(0,6)  
+	local togBtn = Instance.new("TextButton", row)
+	togBtn.Size = UDim2.new(0,54,0,28)
+	togBtn.Position = UDim2.new(1,-64,0.5,-14)
+	togBtn.Text = "OFF"
+	togBtn.Font = Enum.Font.GothamBold
+	togBtn.TextSize = 12
+	togBtn.TextColor3 = Color3.fromRGB(255,255,255)
+	togBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
+	Instance.new("UICorner", togBtn).CornerRadius = UDim.new(0,6)
 
-	local on = false  
-	togBtn.MouseButton1Click:Connect(function()  
-		on = not on  
-		togBtn.Text = on and "ON" or "OFF"  
-		togBtn.BackgroundColor3 = on and Color3.fromRGB(0,200,80) or Color3.fromRGB(80,80,80)  
-		toggle(on)  
-	end)  
+	local on = false
+	togBtn.MouseButton1Click:Connect(function()
+		on = not on
+		togBtn.Text = on and "ON" or "OFF"
+		togBtn.BackgroundColor3 = on and Color3.fromRGB(0,200,80) or Color3.fromRGB(80,80,80)
+		toggle(on)
+	end)
 
-	if not noSlider then  
-		local maxVal = 500  
-		local sliderBg = Instance.new("Frame", row)  
-		sliderBg.Size = UDim2.new(0,140,0,10)  
-		sliderBg.Position = UDim2.new(0,130,0.5,-5)  
-		sliderBg.BackgroundColor3 = Color3.fromRGB(60,60,60)  
-		Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(1,0)  
-		local fill = Instance.new("Frame", sliderBg)  
-		fill.Size = UDim2.new(getVal()/maxVal, 0, 1, 0)  
-		fill.BackgroundColor3 = Color3.fromRGB(0,255,120)  
-		fill.BorderSizePixel = 0  
-		Instance.new("UICorner", fill).CornerRadius = UDim.new(1,0)  
-		local valBox = Instance.new("TextBox", row)  
-		valBox.Size = UDim2.new(0,45,0,26)  
-		valBox.Position = UDim2.new(0,275,0.5,-13)  
-		valBox.BackgroundColor3 = Color3.fromRGB(45,45,45)  
-		valBox.TextColor3 = Color3.fromRGB(0,255,120)  
-		valBox.Font = Enum.Font.GothamBold  
-		valBox.TextSize = 13  
-		valBox.Text = tostring(getVal())  
-		valBox.ClearTextOnFocus = true  
-		Instance.new("UICorner", valBox).CornerRadius = UDim.new(0,4)  
-		local function applyVal(v)  
-			v = math.clamp(math.floor(v), 0, maxVal)  
-			fill.Size = UDim2.new(v/maxVal, 0, 1, 0)  
-			valBox.Text = tostring(v)  
-			setVal(v)  
-		end  
-		valBox.FocusLost:Connect(function()  
-			local num = tonumber(valBox.Text)  
-			if num then applyVal(num) else valBox.Text = tostring(getVal()) end  
-		end)  
-		local dragging = false  
-		local function updateSlider(input)  
-			local rel = (input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X  
-			rel = math.clamp(rel, 0, 1)  
-			applyVal(math.floor(rel * maxVal))  
-		end  
-		sliderBg.InputBegan:Connect(function(i)  
-			if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dragging = true updateSlider(i) end  
-		end)  
-		UIS.InputChanged:Connect(function(i) if dragging then updateSlider(i) end end)  
-		UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dragging = false end end)  
+	if not noSlider then
+		local maxVal = 500
+		local sliderBg = Instance.new("Frame", row)
+		sliderBg.Size = UDim2.new(0,140,0,10)
+		sliderBg.Position = UDim2.new(0,130,0.5,-5)
+		sliderBg.BackgroundColor3 = Color3.fromRGB(60,60,60)
+		Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(1,0)
+
+		local fill = Instance.new("Frame", sliderBg)
+		fill.Size = UDim2.new(getVal()/maxVal, 0, 1, 0)
+		fill.BackgroundColor3 = Color3.fromRGB(0,255,120)
+		fill.BorderSizePixel = 0
+		Instance.new("UICorner", fill).CornerRadius = UDim.new(1,0)
+
+		local valBox = Instance.new("TextBox", row)
+		valBox.Size = UDim2.new(0,45,0,26)
+		valBox.Position = UDim2.new(0,275,0.5,-13)
+		valBox.BackgroundColor3 = Color3.fromRGB(45,45,45)
+		valBox.TextColor3 = Color3.fromRGB(0,255,120)
+		valBox.Font = Enum.Font.GothamBold
+		valBox.TextSize = 13
+		valBox.Text = tostring(getVal())
+		valBox.ClearTextOnFocus = true
+		Instance.new("UICorner", valBox).CornerRadius = UDim.new(0,4)
+
+		local function applyVal(v)
+			v = math.clamp(math.floor(v), 0, maxVal)
+			fill.Size = UDim2.new(v/maxVal, 0, 1, 0)
+			valBox.Text = tostring(v)
+			setVal(v)
+		end
+
+		valBox.FocusLost:Connect(function()
+			local num = tonumber(valBox.Text)
+			if num then applyVal(num) else valBox.Text = tostring(getVal()) end
+		end)
+
+		local dragging = false
+		local function updateSlider(input)
+			local rel = (input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X
+			rel = math.clamp(rel, 0, 1)
+			applyVal(math.floor(rel * maxVal))
+		end
+
+		sliderBg.InputBegan:Connect(function(i)
+			if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+				dragging = true
+				updateSlider(i)
+			end
+		end)
+		UIS.InputChanged:Connect(function(i) if dragging then updateSlider(i) end end)
+		UIS.InputEnded:Connect(function(i)
+			if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+				dragging = false
+			end
+		end)
 	end
-	return row, labelBtn
+    return row
 end
 
 -- ================= PAGE 1 ROWS =================
-createRow(page1, "FLY", 5, function() return flySpeed end, function(v) flySpeed = v end, function(s) flyEnabled = s if s then startFly() else stopFly() end end)
-createRow(page1, "SPEED", 65, function() return walkSpeed end, function(v) walkSpeed = v if speedEnabled then humanoid.WalkSpeed = v end end, function(s) speedEnabled = s humanoid.WalkSpeed = s and walkSpeed or 16 end)
-createRow(page1, "JUMP", 125, function() return jumpPower end, function(v) jumpPower = v if jumpEnabled then humanoid.JumpPower = v end end, function(s) jumpEnabled = s humanoid.JumpPower = s and jumpPower or 50 end)
-createRow(page1, "NOCLIP", 185, function() return 0 end, function() end, function(s) noclipEnabled = s if s then startNoclip() else stopNoclip() end end, true)
-page1.CanvasSize = UDim2.new(0,0,0,245)
+createRow(page1, "FLY", 5,
+	function() return flySpeed end,
+	function(v) flySpeed = v end,
+	function(s) flyEnabled = s if s then startFly() else stopFly() end end
+)
+createRow(page1, "SPEED", 65,
+	function() return walkSpeed end,
+	function(v) walkSpeed = v if speedEnabled then humanoid.WalkSpeed = v end end,
+	function(s) speedEnabled = s humanoid.WalkSpeed = s and walkSpeed or 16 end
+)
+createRow(page1, "JUMP", 125,
+	function() return jumpPower end,
+	function(v) jumpPower = v if jumpEnabled then humanoid.JumpPower = v end end,
+	function(s) jumpEnabled = s humanoid.JumpPower = s and jumpPower or 50 end
+)
+createRow(page1, "NOCLIP", 185,
+	function() return 0 end,
+	function() end,
+	function(s) noclipEnabled = s if s then startNoclip() else stopNoclip() end end,
+	true
+)
 
--- ================= PAGE 2 ROWS (Fixed Teleport Dropdown) =================
-createRow(page2, "ESP", 5, function() return 0 end, function() end, function(s) espEnabled = s if s then startESP() else stopESP() end end, true)
-createRow(page2, "FREECAM", 65, function() return 0 end, function() end, function(s) freecamEnabled = s if s then startFreecam() else stopFreecam() end end, true)
+-- ================= PAGE 2 ROWS (ESP & FREECAM) =================
+createRow(page2, "ESP", 5,
+	function() return 0 end,
+	function() end,
+	function(s)
+		espEnabled = s
+		if s then startESP() else stopESP() end
+	end,
+	true
+)
 
-local tpRow, tpLabel = createRow(page2, "TELEPORT ↓", 125, function() return 0 end, function() end, function(s)
-	if s and selectedPlayer and selectedPlayer.Character then
-		local tr = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
-		local mr = getChar():FindFirstChild("HumanoidRootPart")
-		if tr and mr then mr.CFrame = tr.CFrame * CFrame.new(0, 0, 3) end
-	end
-end, true)
+createRow(page2, "FREECAM", 65,
+    function() return 0 end,
+    function() end,
+    function(s)
+        freecamEnabled = s
+        if s then startFreecam() else stopFreecam() end
+    end,
+    true
+)
 
--- Player List UI
-local tpScroll = Instance.new("ScrollingFrame", page2)
-tpScroll.Size = UDim2.new(1, -20, 0, 100)
-tpScroll.Position = UDim2.new(0, 10, 0, 180)
-tpScroll.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-tpScroll.BorderSizePixel = 0
-tpScroll.Visible = false
-Instance.new("UICorner", tpScroll)
-local tpListLayout = Instance.new("UIListLayout", tpScroll)
-tpListLayout.Padding = UDim.new(0, 5)
+-- ================= TELEPORT SYSTEM (CLICK TO SHOW LIST) =================
+local tpBase = Instance.new("Frame", page2)
+tpBase.Size = UDim2.new(1,-20,0,50)
+tpBase.Position = UDim2.new(0,10,0,125)
+tpBase.BackgroundColor3 = Color3.fromRGB(30,30,30)
+Instance.new("UICorner", tpBase)
 
-tpLabel.MouseButton1Click:Connect(function()
-	tpListVisible = not tpListVisible
-	tpScroll.Visible = tpListVisible
-	-- ปรับความสูง Canvas ของ Page2 อัตโนมัติเพื่อให้เลื่อนดูได้
-	page2.CanvasSize = UDim2.new(0,0,0, tpListVisible and 300 or 200)
+local tpClickArea = Instance.new("TextButton", tpBase)
+tpClickArea.Size = UDim2.new(1,0,1,0)
+tpClickArea.BackgroundTransparency = 1
+tpClickArea.Text = "TELEPORT (Click to Expand)"
+tpClickArea.TextColor3 = Color3.fromRGB(255,255,255)
+tpClickArea.Font = Enum.Font.GothamBold
+tpClickArea.TextSize = 14
+
+local playerListFrame = Instance.new("ScrollingFrame", page2)
+playerListFrame.Size = UDim2.new(1,-20,0,150)
+playerListFrame.Position = UDim2.new(0,10,0,180)
+playerListFrame.Visible = false
+playerListFrame.BackgroundColor3 = Color3.fromRGB(15,15,15)
+playerListFrame.ScrollBarThickness = 4
+Instance.new("UIListLayout", playerListFrame).Padding = UDim.new(0,5)
+
+tpClickArea.MouseButton1Click:Connect(function()
+    playerListFrame.Visible = not playerListFrame.Visible
+    -- ล้างรายชื่อเก่าและสร้างใหม่ทุกครั้งที่เปิด
+    if playerListFrame.Visible then
+        for _,v in pairs(playerListFrame:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
+        for _,p in pairs(game.Players:GetPlayers()) do
+            if p ~= player then
+                local pBtn = Instance.new("TextButton", playerListFrame)
+                pBtn.Size = UDim2.new(1,0,0,30)
+                pBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+                pBtn.Text = p.Name
+                pBtn.TextColor3 = Color3.fromRGB(0,255,120)
+                pBtn.Font = Enum.Font.Gotham
+                pBtn.MouseButton1Click:Connect(function()
+                    if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        getChar():SetPrimaryPartCFrame(p.Character.HumanoidRootPart.CFrame)
+                    end
+                end)
+            end
+        end
+    end
 end)
-
-local function updatePlayerList()
-	for _, child in ipairs(tpScroll:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
-	for _, p in ipairs(game.Players:GetPlayers()) do
-		if p ~= player then
-			local btn = Instance.new("TextButton", tpScroll)
-			btn.Size = UDim2.new(1, -10, 0, 30)
-			btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-			btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-			btn.Text = p.DisplayName.." (@"..p.Name..")"
-			btn.Font = Enum.Font.Gotham
-			btn.TextSize = 12
-			Instance.new("UICorner", btn)
-			btn.MouseButton1Click:Connect(function()
-				selectedPlayer = p
-				for _, b in ipairs(tpScroll:GetChildren()) do if b:IsA("TextButton") then b.BackgroundColor3 = Color3.fromRGB(40,40,40) end end
-				btn.BackgroundColor3 = Color3.fromRGB(0, 255, 120)
-			end)
-		end
-	end
-	tpScroll.CanvasSize = UDim2.new(0, 0, 0, tpListLayout.AbsoluteContentSize.Y)
-end
-
-game.Players.PlayerAdded:Connect(updatePlayerList)
-game.Players.PlayerRemoving:Connect(updatePlayerList)
-updatePlayerList()
-page2.CanvasSize = UDim2.new(0,0,0,200)
 
 -- ================= RESPAWN =================
 player.CharacterAdded:Connect(function()
@@ -549,4 +620,6 @@ player.CharacterAdded:Connect(function()
 	if jumpEnabled then humanoid.JumpPower = jumpPower end
 	if noclipEnabled then startNoclip() end
 	if flyEnabled then startFly() end
-	if espEnabled then stopESP() startESP()
+	if espEnabled then stopESP() startESP() end
+    if freecamEnabled then stopFreecam() startFreecam() end
+end)
