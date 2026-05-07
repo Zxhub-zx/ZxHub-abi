@@ -116,7 +116,6 @@ tab2Btn.TextColor3 = Color3.fromRGB(255,255,255)
 tab2Btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
 Instance.new("UICorner", tab2Btn).CornerRadius = UDim.new(0,6)
 
--- ปุ่มหน้า 3 (เพิ่มใหม่)
 local tab3Btn = Instance.new("TextButton", frame)
 tab3Btn.Size = UDim2.new(0,100,0,28)
 tab3Btn.Position = UDim2.new(0,230,0,42)
@@ -144,7 +143,6 @@ page2.Visible = false
 page2.ScrollBarThickness = 3
 page2.CanvasSize = UDim2.new(0,0,0,600)
 
--- หน้า 3 (เพิ่มใหม่)
 local page3 = Instance.new("ScrollingFrame", frame)
 page3.Size = UDim2.new(1,0,1,-80)
 page3.Position = UDim2.new(0,0,0,78)
@@ -230,7 +228,6 @@ downBtn.TextSize = 24
 Instance.new("UICorner", downBtn).CornerRadius = UDim.new(0,10)
 
 -- ================= MOVE BUTTONS (ซ้าย/ขวา/หน้า/หลัง) =================
--- วางไว้ฝั่งซ้ายล่าง แบบ D-pad
 local moveForwardBtn = Instance.new("TextButton", gui)
 moveForwardBtn.Size = UDim2.new(0,60,0,60)
 moveForwardBtn.Position = UDim2.new(0,80,0.7,0)
@@ -724,131 +721,6 @@ tpMainBtn.Text = ""
 tpMainBtn.MouseButton1Click:Connect(function()
 	tpList.Visible = not tpList.Visible
 	if tpList.Visible then updateTPList() end
-end)
-
--- ================= PAGE 3 - PULL PLAYER =================
-local pullHeaderRow = Instance.new("Frame", page3)
-pullHeaderRow.Size = UDim2.new(1,-20,0,50)
-pullHeaderRow.Position = UDim2.new(0,10,0,5)
-pullHeaderRow.BackgroundColor3 = Color3.fromRGB(30,30,30)
-pullHeaderRow.BorderSizePixel = 0
-Instance.new("UICorner", pullHeaderRow).CornerRadius = UDim.new(0,8)
-
-local pullHeaderLabel = Instance.new("TextLabel", pullHeaderRow)
-pullHeaderLabel.Size = UDim2.new(1,0,1,0)
-pullHeaderLabel.BackgroundTransparency = 1
-pullHeaderLabel.Text = "PULL PLAYER"
-pullHeaderLabel.TextColor3 = Color3.new(1,1,1)
-pullHeaderLabel.Font = Enum.Font.GothamBold
-pullHeaderLabel.TextSize = 14
-
--- กดที่หัวข้อเพื่อ refresh + toggle รายชื่อ
-local pullListContainer = Instance.new("Frame", page3)
-pullListContainer.Size = UDim2.new(1,-20,0,220)
-pullListContainer.Position = UDim2.new(0,10,0,60)
-pullListContainer.BackgroundColor3 = Color3.fromRGB(15,15,15)
-pullListContainer.Visible = false
-pullListContainer.BorderSizePixel = 0
-Instance.new("UICorner", pullListContainer).CornerRadius = UDim.new(0,8)
-
-local pullScroll = Instance.new("ScrollingFrame", pullListContainer)
-pullScroll.Size = UDim2.new(1,-10,1,-10)
-pullScroll.Position = UDim2.new(0,5,0,5)
-pullScroll.BackgroundTransparency = 1
-pullScroll.ScrollBarThickness = 2
-
-local pullLayout = Instance.new("UIListLayout", pullScroll)
-pullLayout.Padding = UDim.new(0,5)
-
--- ตัวแปรเก็บ pull loop connections
-local pullConnections = {}
-
-local function stopPullPlayer(p)
-	if pullConnections[p] then
-		pullConnections[p]:Disconnect()
-		pullConnections[p] = nil
-	end
-end
-
-local function startPullPlayer(p)
-	-- ดึงซ้ำทุก 0.1 วิ
-	pullConnections[p] = RunService.Heartbeat:Connect(function()
-		local myChar = player.Character
-		local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
-		local theirChar = p.Character
-		local theirRoot = theirChar and theirChar:FindFirstChild("HumanoidRootPart")
-		if myRoot and theirRoot then
-			theirRoot.CFrame = myRoot.CFrame + myRoot.CFrame.LookVector * 3
-		end
-	end)
-end
-
-local function updatePullList()
-	-- ลบปุ่มเก่า
-	for _, v in pairs(pullScroll:GetChildren()) do
-		if v:IsA("Frame") then v:Destroy() end
-	end
-	for _, p in pairs(game.Players:GetPlayers()) do
-		if p ~= player then
-			-- แต่ละแถว
-			local row = Instance.new("Frame", pullScroll)
-			row.Size = UDim2.new(1,0,0,36)
-			row.BackgroundColor3 = Color3.fromRGB(35,35,35)
-			row.BorderSizePixel = 0
-			Instance.new("UICorner", row).CornerRadius = UDim.new(0,6)
-
-			local nameLbl = Instance.new("TextLabel", row)
-			nameLbl.Size = UDim2.new(1,-70,1,0)
-			nameLbl.Position = UDim2.new(0,10,0,0)
-			nameLbl.BackgroundTransparency = 1
-			nameLbl.Text = p.Name
-			nameLbl.TextColor3 = Color3.new(1,1,1)
-			nameLbl.Font = Enum.Font.Gotham
-			nameLbl.TextSize = 13
-			nameLbl.TextXAlignment = Enum.TextXAlignment.Left
-
-			local togBtn = Instance.new("TextButton", row)
-			togBtn.Size = UDim2.new(0,54,0,26)
-			togBtn.Position = UDim2.new(1,-62,0.5,-13)
-			togBtn.Text = "OFF"
-			togBtn.Font = Enum.Font.GothamBold
-			togBtn.TextSize = 12
-			togBtn.TextColor3 = Color3.fromRGB(255,255,255)
-			togBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
-			togBtn.BorderSizePixel = 0
-			Instance.new("UICorner", togBtn).CornerRadius = UDim.new(0,6)
-
-			local pulling = false
-			togBtn.MouseButton1Click:Connect(function()
-				pulling = not pulling
-				togBtn.Text = pulling and "ON" or "OFF"
-				togBtn.BackgroundColor3 = pulling and Color3.fromRGB(0,200,80) or Color3.fromRGB(80,80,80)
-				if pulling then
-					startPullPlayer(p)
-				else
-					stopPullPlayer(p)
-				end
-			end)
-
-			-- ถ้าผู้เล่นออกจากเกม ให้หยุด pull
-			p.AncestryChanged:Connect(function()
-				if not p:IsDescendantOf(game) then
-					stopPullPlayer(p)
-				end
-			end)
-		end
-	end
-	pullScroll.CanvasSize = UDim2.new(0,0,0, pullLayout.AbsoluteContentSize.Y)
-end
-
--- กดที่หัวข้อ PULL PLAYER เพื่อเปิด/ปิดรายชื่อ
-local pullMainBtn = Instance.new("TextButton", pullHeaderRow)
-pullMainBtn.Size = UDim2.new(1,0,1,0)
-pullMainBtn.BackgroundTransparency = 1
-pullMainBtn.Text = ""
-pullMainBtn.MouseButton1Click:Connect(function()
-	pullListContainer.Visible = not pullListContainer.Visible
-	if pullListContainer.Visible then updatePullList() end
 end)
 
 -- ================= CHARACTER RELOAD =================
